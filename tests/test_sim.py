@@ -130,3 +130,21 @@ def test_grazing_dart_bounces_and_square_dart_sticks(twin):
     a = np.radians(20.0)  # from close in, so it reaches the board slowly
     slow = sim.launch((0.9, 0.0, 1.6), (1.5 * np.cos(a), 0.0, 1.5 * np.sin(a)))
     assert slow.hit_board and not slow.stuck  # arrives too slowly to stick
+
+
+def test_a_stuck_dart_stays_put_while_the_replay_keeps_recording(twin):
+    import json
+    from pathlib import Path
+
+    best = json.loads((Path(__file__).parents[1] / "docs/baselines/best_throw.json").read_text())
+    p = ThrowParams(tuple(best["q_start"]), tuple(best["q_end"]), best["t_release_s"])
+    sim, tips = ThrowSim(twin), []
+
+    def render():
+        tips.append(sim.dart_state()[0].copy())
+        return np.zeros((1, 1, 3))
+
+    r = sim.throw(p, frames=[], render=render, fps=60)
+    assert r.stuck
+    hold = tips[-30:]  # the last half second of recording is all hold
+    assert max(np.linalg.norm(t - hold[0]) for t in hold) < 1e-9
