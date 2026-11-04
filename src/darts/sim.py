@@ -1,0 +1,259 @@
+# pyright: reportAttributeAccessIssue=false
+"""SO-101 on a stand, a dart held by jaw friction, and a scripted planar throw (V1)."""
+
+from dataclasses import dataclass
+from pathlib import Path
+
+import mujoco
+import numpy as np
+
+from darts.twin import Twin
+
+ROOT = Path(__file__).resolve().parents[2]
+SCENE = ROOT / "assets" / "menagerie" / "robotstudio_so101" / "scene.xml"
+ARM_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
+THROW_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex")
+# Dart pose in the gripper frame: pinched at the fingertips against the fixed jaw plate, barrel
+# along the finger direction (-z), tip protruding forward. Placement found by experiment.
+GRIP_X_OFFSET = -0.0098  # fixed jaw plate surface; dart centre is radius further along +x
+GRIP_Z_CENTRE = -0.113
+RELEASE_CONFIRM_STEPS = 5  # consecutive steps without pad contact that count as released
+CONTACT_IMPRATIO = 100.0
+CONTACT_SOLREF = (0.004, 1.0)
+JAW_CLAMP_START = -0.12  # jaw angle at reset, just short of contact
+_GRIPPER_BODIES = ("gripper", "moving_jaw_so101_v1", "camera_mount")  # the hand: both jaws
+
+
+def assets_available() -> bool:
+    return SCENE.exists()
+
+
+def _hand_collision_geoms(model: mujoco.MjModel) -> set[int]:
+    bodies = {model.body(n).id for n in _GRIPPER_BODIES}
+    return {
+        i
+        for i in range(model.ngeom)
+        if int(model.geom_bodyid[i]) in bodies
+        and (model.geom_contype[i] or model.geom_conaffinity[i])
+    }
+
+
+def build_model(twin: Twin) -> mujoco.MjModel:
+    """Menagerie SO-101 on a stand, with a board marker, a free dart, and twin.yaml overrides."""
+    spec = mujoco.MjSpec.from_file(str(SCENE))
+    h = twin.mount.height_m
+    spec.body("base").pos = [0, 0, h]
+    spec.worldbody.add_geom(
+        name="stand",
+        type=mujoco.mjtGeom.mjGEOM_BOX,
+        pos=[0, 0, (h - 0.003) / 2],
+        size=[0.05, 0.05, (h - 0.003) / 2],
+        rgba=[0.4, 0.4, 0.45, 1],
+    )
+    spec.worldbody.add_geom(  # visual board face, no collision (the scored board arrives in V2)
+        name="board_face",
+        type=mujoco.mjtGeom.mjGEOM_CYLINDER,
+        pos=[twin.board.distance_m + 0.01, 0, twin.board.centre_height_m],
+        quat=[0.70710678, 0, 0.70710678, 0],
+        size=[twin.board.radius_m, 0.01, 0],
+        contype=0,
+        conaffinity=0,
+        rgba=[0.1, 0.1, 0.1, 1],
+    )
+    dart = spec.worldbody.add_body(name="dart")
+    dart.add_freejoint()
+    half = twin.dart.length_m / 2
+    dart.add_geom(
+        name="dart_barrel",
+        type=mujoco.mjtGeom.mjGEOM_CAPSULE,
+        fromto=[0, 0, -half, 0, 0, half],
+        size=[twin.dart.radius_m, 0, 0],
+        mass=twin.dart.mass_kg,
+        friction=[twin.release.pad_friction, 0.005, 0.0001],
+        rgba=[0.9, 0.1, 0.1, 1],
+    )
+    model = spec.compile()
+    model.opt.timestep = twin.sim.timestep_s
+    model.opt.gravity[:] = (0, 0, -twin.sim.gravity_m_s2)
+    model.actuator_gainprm[:, 0] = twin.servo.kp
+    model.actuator_biasprm[:, 1] = -twin.servo.kp
+    model.actuator_biasprm[:, 2] = -twin.servo.kv
+    model.actuator_forcerange[:] = (-twin.servo.torque_limit_nm, twin.servo.torque_limit_nm)
+    # Contact numerics, tuned so a pinched dart neither creeps at rest (0.15 mm/s) nor slips in a
+    # hard swing; the Menagerie defaults let it creep out in 0.5 s. They are solver settings, not
+    # physical parameters, so they stay out of twin.yaml.
+    model.opt.impratio = CONTACT_IMPRATIO
+    for i in _hand_collision_geoms(model):
+        model.geom_solref[i] = CONTACT_SOLREF
+        model.geom_friction[i, 0] = twin.release.pad_friction  # pad friction comes from the twin
+    model.geom_solref[model.geom("dart_barrel").id] = CONTACT_SOLREF
+    return model
+
+
+@dataclass(frozen=True)
+class ThrowParams:
+    q_start: tuple[float, float, float]  # shoulder_lift, elbow_flex, wrist_flex
+    q_end: tuple[float, float, float]
+    t_release_s: float  # time after motion start that the jaw is commanded open
+
+
+@dataclass(frozen=True)
+class ThrowResult:
+    released: bool
+    release_speed_m_s: float
+    release_angle_rad: float  # above horizontal
+    release_height_m: float
+    crossed_plane: bool  # reached the board plane before hitting the floor or timing out
+    miss_m: float  # distance from board centre where it crossed (inf if it never crossed)
+    shortfall_m: float  # how far short of the board plane it ended (0 if it crossed)
+    hit_board: bool  # crossed inside the scoring radius
+    slipped_early: bool = False  # dart left the jaws before the release command
+    diverged: bool = False  # the solver blew up (non-finite state); the throw is invalid
+    collided: bool = False  # the dart touched the arm, stand or floor outside the jaw pads
+
+
+class ThrowSim:
+    def __init__(self, twin: Twin, model: mujoco.MjModel | None = None):
+        self.twin = twin
+        self.model = model or build_model(twin)
+        self.data = mujoco.MjData(self.model)
+        m = self.model
+        self._jid = {n: m.joint(n).id for n in (*ARM_JOINTS, "gripper")}
+        self._aid = {n: m.actuator(n).id for n in (*ARM_JOINTS, "gripper")}
+        self._gripper_body = m.body("gripper").id
+        self._dart_geom = m.geom("dart_barrel").id
+        self._floor_geom = m.geom("floor").id
+        self._dart_body = m.body("dart").id
+        self._dart_qadr = int(m.jnt_qposadr[m.body_jntadr[self._dart_body]])
+        self._dart_vadr = int(m.jnt_dofadr[m.body_jntadr[self._dart_body]])
+        self._gripper_geoms = _hand_collision_geoms(m)
+
+    def _qadr(self, joint: str) -> int:
+        return int(self.model.jnt_qposadr[self._jid[joint]])
+
+    def _place_dart_in_grip(self) -> None:
+        m, d = self.model, self.data
+        mujoco.mj_forward(m, d)
+        rot = d.xmat[self._gripper_body].reshape(3, 3)
+        local = np.array([GRIP_X_OFFSET + self.twin.dart.radius_m, 0.0, GRIP_Z_CENTRE])
+        quat = np.empty(4)
+        mujoco.mju_mat2Quat(quat, rot.flatten())
+        a = self._dart_qadr
+        d.qpos[a : a + 3] = d.xpos[self._gripper_body] + rot @ local
+        d.qpos[a + 3 : a + 7] = quat
+
+    def reset(self, q_start: tuple[float, float, float], settle_s: float = 0.4) -> None:
+        mujoco.mj_resetData(self.model, self.data)
+        d = self.data
+        for n, v in zip(THROW_JOINTS, q_start, strict=True):
+            d.qpos[self._qadr(n)] = v
+            d.ctrl[self._aid[n]] = v
+        d.qpos[self._qadr("gripper")] = JAW_CLAMP_START
+        d.ctrl[self._aid["gripper"]] = JAW_CLAMP_START
+        self._place_dart_in_grip()
+        for _ in range(round(settle_s / self.model.opt.timestep)):
+            self._slew("gripper", self.twin.release.jaw_hold_rad)
+            mujoco.mj_step(self.model, d)
+
+    def dart_contacts(self) -> tuple[bool, bool, bool]:
+        """(touching a jaw pad, touching the arm or stand, touching the floor)."""
+        pad = other = floor = False
+        d = self.data
+        for i in range(d.ncon):
+            c = d.contact[i]
+            pair = {int(c.geom1), int(c.geom2)}
+            if self._dart_geom not in pair:
+                continue
+            if pair & self._gripper_geoms:
+                pad = True
+            elif self._floor_geom in pair:
+                floor = True
+            else:
+                other = True
+        return pad, other, floor
+
+    def _slew(self, name: str, target: float) -> None:
+        """Rate-limit the position command to the servo velocity limit."""
+        a = self._aid[name]
+        step = self.twin.servo.velocity_limit_rad_s * self.model.opt.timestep
+        cur = self.data.ctrl[a]
+        self.data.ctrl[a] = cur + float(np.clip(target - cur, -step, step))
+
+    def dart_state(self) -> tuple[np.ndarray, np.ndarray]:
+        a, v = self._dart_qadr, self._dart_vadr
+        return self.data.qpos[a : a + 3].copy(), self.data.qvel[v : v + 3].copy()
+
+    def throw(
+        self,
+        p: ThrowParams,
+        max_time_s: float = 3.0,
+        frames: list | None = None,
+        render=None,
+        fps: int = 30,
+    ) -> ThrowResult:
+        """Run one scripted throw. `render` is a callable returning an RGB frame, if given."""
+        self.reset(p.q_start)
+        m, d, tw = self.model, self.data, self.twin
+        dt = m.opt.timestep
+        board_x, zc = tw.board.distance_m, tw.board.centre_height_m
+        released, speed, angle, height = False, 0.0, 0.0, 0.0
+        crossed, miss, hit, slipped, diverged = False, float("inf"), False, False, False
+        collided = False
+        off_pad_steps, first_off = 0, None
+        t, next_frame = 0.0, 0.0
+        prev = self.dart_state()[0]
+        while t < p.t_release_s + max_time_s:
+            for n, target in zip(THROW_JOINTS, p.q_end, strict=True):
+                self._slew(n, target)
+            if t >= p.t_release_s:
+                self._slew("gripper", tw.release.jaw_open_rad)
+            mujoco.mj_step(m, d)
+            t += dt
+            if render is not None and frames is not None and t >= next_frame:
+                frames.append(render())
+                next_frame += 1.0 / fps
+            pos, vel = self.dart_state()
+            if not (np.isfinite(pos).all() and np.isfinite(d.qacc).all()):
+                diverged = True
+                break
+            on_pad, other, on_floor = self.dart_contacts()
+            if other:
+                collided = True
+                break
+            if not released:
+                if on_pad:  # contact can flicker while the jaw still pushes the dart
+                    off_pad_steps, first_off = 0, None
+                else:
+                    off_pad_steps += 1
+                    first_off = first_off or (t, pos, vel)
+                if off_pad_steps >= RELEASE_CONFIRM_STEPS and first_off is not None:
+                    released = True
+                    t_off, p_off, v_off = first_off
+                    slipped = t_off < p.t_release_s
+                    speed = float(np.linalg.norm(v_off))
+                    angle = float(np.arctan2(v_off[2], np.hypot(v_off[0], v_off[1])))
+                    height = float(p_off[2])
+            if released:
+                if prev[0] < board_x <= pos[0]:
+                    f = (board_x - prev[0]) / (pos[0] - prev[0])
+                    cross = prev + f * (pos - prev)
+                    miss = float(np.hypot(cross[1], cross[2] - zc))
+                    crossed, hit = True, miss <= tw.board.radius_m
+                    break
+                if on_floor or pos[2] <= 0.0:
+                    break
+            prev = pos
+        shortfall = 0.0 if crossed else max(0.0, board_x - float(self.dart_state()[0][0]))
+        return ThrowResult(
+            released=released,
+            release_speed_m_s=speed,
+            release_angle_rad=angle,
+            release_height_m=height,
+            crossed_plane=crossed,
+            miss_m=miss,
+            shortfall_m=shortfall,
+            hit_board=hit,
+            slipped_early=slipped,
+            diverged=diverged,
+            collided=collided,
+        )

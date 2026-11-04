@@ -1,0 +1,97 @@
+import dataclasses
+
+import mujoco
+import numpy as np
+import pytest
+
+from darts.sim import SCENE, ThrowParams, ThrowSim, assets_available, build_model
+from darts.twin import load_twin
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.skipif(not assets_available(), reason="run `make assets`"),
+]
+
+HOLD = (-1.0, 1.0, 0.0)  # the dart pose is fixed across tests
+
+
+@pytest.fixture(scope="module")
+def twin():
+    return load_twin()
+
+
+def test_scene_path_exists():
+    assert SCENE.exists()
+
+
+def _rel_to_gripper(sim):
+    rot = sim.data.xmat[sim._gripper_body].reshape(3, 3)
+    return rot.T @ (sim.dart_state()[0] - sim.data.xpos[sim._gripper_body])
+
+
+def test_dart_stays_gripped_at_rest(twin):
+    sim = ThrowSim(twin)
+    sim.reset(HOLD, settle_s=0.5)
+    before = _rel_to_gripper(sim)
+    for _ in range(round(2.0 / sim.model.opt.timestep)):
+        sim._slew("gripper", twin.release.jaw_hold_rad)
+        mujoco.mj_step(sim.model, sim.data)
+    assert sim.dart_contacts()[0]
+    assert np.linalg.norm(_rel_to_gripper(sim) - before) < 1e-3
+
+
+def test_dart_survives_hard_swing_without_release_command(twin):
+    """Friction alone must hold the dart through a fast motion until the jaw opens."""
+    sim = ThrowSim(twin)
+    r = sim.throw(ThrowParams((-1.4, -1.5, -1.5), (0.0, 1.0, 1.3), 5.0), max_time_s=0.6)
+    assert not r.slipped_early
+
+
+def test_zero_velocity_limit_never_releases(twin):
+    t = dataclasses.replace(twin, servo=dataclasses.replace(twin.servo, velocity_limit_rad_s=0.0))
+    sim = ThrowSim(t)
+    r = sim.throw(ThrowParams(HOLD, (-0.2, 0.5, -0.5), 0.1), max_time_s=1.0)
+    assert not r.released
+
+
+def test_jaw_opens_at_requested_step(twin):
+    sim = ThrowSim(twin)
+    p = ThrowParams(HOLD, HOLD, 0.2)
+    sim.reset(p.q_start)
+    dt = sim.model.opt.timestep
+    gripper = sim._aid["gripper"]
+    held_cmd = sim.data.ctrl[gripper]
+    steps = 0
+    while sim.data.ctrl[gripper] <= held_cmd + 1e-9 and steps < 2000:
+        if steps * dt >= p.t_release_s:
+            sim._slew("gripper", twin.release.jaw_open_rad)
+        steps += 1
+        mujoco.mj_step(sim.model, sim.data)
+    assert steps * dt == pytest.approx(p.t_release_s, abs=2 * dt)
+
+
+def test_dart_leaves_after_jaw_opens_with_release_speed(twin):
+    sim = ThrowSim(twin)
+    r = sim.throw(ThrowParams((-1.4, -1.5, -1.5), (0.0, 1.0, 1.3), 0.2))
+    assert r.released and not r.slipped_early
+    assert 1.0 < r.release_speed_m_s < 6.0
+
+
+def test_free_flight_matches_closed_form(twin):
+    """Dart clear of the arm follows the ballistic arc to within 1 mm (RK4 integrator)."""
+    model = build_model(twin)
+    model.opt.integrator = mujoco.mjtIntegrator.mjINT_RK4
+    model.opt.timestep = 0.001
+    sim = ThrowSim(twin, model)
+    sim.reset(HOLD, settle_s=0.1)
+    a, v = sim._dart_qadr, sim._dart_vadr
+    p0 = np.array([0.5, 0.0, 1.6])
+    v0 = np.array([3.0, 0.0, 2.5])
+    sim.data.qpos[a : a + 3] = p0
+    sim.data.qvel[v : v + 6] = 0
+    sim.data.qvel[v : v + 3] = v0
+    g, t_end = twin.sim.gravity_m_s2, 0.4
+    for _ in range(round(t_end / model.opt.timestep)):
+        mujoco.mj_step(model, sim.data)
+    expected = p0 + v0 * t_end + np.array([0, 0, -0.5 * g * t_end**2])
+    assert np.linalg.norm(sim.data.qpos[a : a + 3] - expected) < 1e-3

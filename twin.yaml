@@ -1,0 +1,24 @@
+# The only source of calibratable physical parameters (ADR-0006).
+schema_version: 1
+sim:
+  timestep_s: 0.002
+  gravity_m_s2: 9.81
+servo:                       # STS3215 at ~7.4 V; Menagerie gains
+  kp: 998.22
+  kv: 2.731
+  torque_limit_nm: 2.94      # stall torque, per Menagerie forcerange
+  velocity_limit_rad_s: 4.5  # datasheet 4.71 (0.222 s per 60 deg) minus buffer; measure on hardware
+dart:
+  mass_kg: 0.010
+  length_m: 0.12
+  radius_m: 0.0035           # 7 mm barrel: the SO-101 jaw gap at its closed limit is about 7 mm
+release:
+  jaw_hold_rad: -0.17        # jaw command while holding (squeezes against the dart, torque-limited)
+  jaw_open_rad: 1.0          # jaw command at release
+  pad_friction: 1.0          # jaw pad friction coefficient (Menagerie default; measure on hardware)
+board:                       # regulation: centre 1.73 m above floor, scoring radius 170 mm
+  distance_m: 1.0            # from the arm base axis; V1 found 1.2 m unreachable at the 4.5 rad/s servo limit
+  centre_height_m: 1.73
+  radius_m: 0.17
+mount:
+  height_m: 1.2              # arm base above the floor (a stand about waist height)
