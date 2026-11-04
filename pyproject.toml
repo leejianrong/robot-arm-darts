@@ -1,11 +1,13 @@
 [project]
 name = "darts"
 version = "0.1.0"
-description = "Add your description here"
+description = "SO-101 robot arm digital twin that learns to throw darts in MuJoCo"
 authors = [
     { name = "leejianrong", email = "85485699+leejianrong@users.noreply.github.com" }
 ]
 requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 dependencies = [
     "gymnasium>=1.4.0",
     "imageio>=2.38.1",
