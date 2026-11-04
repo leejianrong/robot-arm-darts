@@ -4,7 +4,7 @@ MuJoCo digital twin of an SO-101 arm that learns to throw a 10 g dart at a regul
 
 ## Status
 
-Trust the code over the docs where they disagree, then fix the docs. Built: V1 (throw feasibility, `docs/v1-feasibility.md`). Next: V2. Feasible range is about 1.0 m, not the 1.5 m first planned.
+Trust the code over the docs where they disagree, then fix the docs. Built: V1 (throw feasibility, `docs/v1-feasibility.md`). Next: V2. Feasible range with a clean (nose-forward) release is not established: 1.0 m only worked with a tumbling dart. Check `darts robust` before trusting any hit.
 
 ## Commands
 

@@ -30,6 +30,10 @@ def _scripted(args: argparse.Namespace) -> int:
         f"{report.best_release_angle_deg:.0f} deg, {report.best_release_height_m:.2f} m high; "
         f"misses board centre by {report.best_miss_m:.2f} m"
     )
+    print(
+        f"release attitude       : {report.best_release_misalign_deg:.0f} deg off its direction "
+        f"of travel, spinning {report.best_release_spin_rad_s:.1f} rad/s"
+    )
     print(f"hits the board at {report.board_distance_m:.1f} m? : {verdict}")
     if not args.no_video:
         try:
@@ -111,6 +115,18 @@ def _replay(args: argparse.Namespace) -> int:
     return 0
 
 
+def _robust(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.robust import robustness
+
+    params = ThrowParams(**json.loads(Path(args.report).read_text())["best_params"])
+    result = robustness(load_twin(args.twin), params)
+    print(json.dumps(result, indent=2))
+    return 0 if result["stuck_rate"] >= args.min_stuck else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="darts")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -140,12 +156,21 @@ def main(argv: list[str] | None = None) -> int:
     tr.add_argument("--scale", type=float, default=0.25, help="size of the learned correction")
     tr.add_argument("--out", default="runs/train")
     tr.add_argument("--twin", default="twin.yaml")
+    ro = sub.add_parser("robust", help="how often a throw sticks across the aero guesses")
+    ro.add_argument("--report", default="runs/v1/report.json", help="a throw report.json")
+    ro.add_argument("--min-stuck", type=float, default=0.8, help="exit 1 below this stick rate")
+    ro.add_argument("--twin", default="twin.yaml")
     rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
     rp.add_argument("--policy", choices=["random", "hand"], default="hand")
     rp.add_argument("--seed", type=int, default=0)
     rp.add_argument("--out", default="runs/replay.mp4")
     rp.add_argument("--twin", default="twin.yaml")
     args = parser.parse_args(argv)
-    return {"throw": _scripted, "drop": _drop, "eval": _eval, "train": _train, "replay": _replay}[
-        args.cmd
-    ](args)
+    return {
+        "throw": _scripted,
+        "drop": _drop,
+        "eval": _eval,
+        "train": _train,
+        "robust": _robust,
+        "replay": _replay,
+    }[args.cmd](args)

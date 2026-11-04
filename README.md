@@ -2,7 +2,7 @@
 
 A MuJoCo digital twin of an SO-101 robot arm that learns to throw a 10 g dart at a regulation-height dartboard. Everything calibratable lives in `twin.yaml`, so the numbers can be tuned to a real arm once you have one.
 
-Status: early. The arm throws in simulation, and darts fly with drag, stick or bounce, and score on a regulation board, but there is no learned policy yet. Under the real servo limits the board has to sit about 1.0 m away ([feasibility results](docs/v1-feasibility.md)).
+Status: early. The arm throws in simulation, and darts fly with drag, stick or bounce, and score on a regulation board, but there is no learned policy yet. Reach is the open problem: the earlier "1.0 m works" result relied on a tumbling dart ([feasibility results](docs/v1-feasibility.md)).
 
 ```mermaid
 flowchart LR
@@ -28,12 +28,13 @@ Search for the best scripted throw at the board distance in `twin.yaml` (about 4
 
 ```console
 $ uv run darts throw --scripted --no-video
-max release speed seen : 4.63 m/s
-best throw             : release 3.07 m/s at 43 deg, 1.65 m high; misses board centre by 0.08 m
-hits the board at 1.0 m? : YES
+max release speed seen : 3.88 m/s
+best throw             : release 2.63 m/s at 51 deg, 1.17 m high; misses board centre by 0.18 m
+release attitude       : 76 deg off its direction of travel, spinning 4.9 rad/s
+hits the board at 1.0 m? : NO
 ```
 
-It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. Launch a dart in free flight with no arm and see where it lands (exit 0 if it sticks):
+A hit needs a clean release (the dart leaves nose-forward and barely spinning). The search used to find tumbling throws that stick by luck and now rejects them, so at 1.0 m the answer is currently NO ([details](docs/v1-feasibility.md)). It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. Launch a dart in free flight with no arm and see where it lands (exit 0 if it sticks):
 
 ```console
 $ uv run darts drop --speed 5 --angle 25.7
