@@ -2,7 +2,7 @@ import math
 
 import pytest
 
-from darts.board import DOUBLE_OUT, SEGMENTS, score_tip
+from darts.board import DOUBLE_OUT, SEGMENTS, board_texture, score_tip
 from darts.twin import load_twin
 
 
@@ -39,3 +39,21 @@ def test_segment_order_has_every_number_once():
 
 def test_scoring_radius_matches_the_twin():
     assert load_twin().board.radius_m == pytest.approx(DOUBLE_OUT)
+
+
+def test_texture_paints_the_rings_where_the_scorer_expects_them():
+    img = board_texture(512)
+    half = 512 / 2
+
+    def px(r_mm, clockwise_deg):
+        y, z = at(r_mm, clockwise_deg)  # y is to the thrower's left, so the image column is -y
+        col = int(half + -y / DOUBLE_OUT * half)
+        row = int(half - z / DOUBLE_OUT * half)
+        return tuple(int(v) for v in img[row, col])
+
+    green, red = (20, 130, 60), (200, 30, 30)
+    assert px(0, 0) == green  # bull
+    assert px(10, 0) == red  # outer bull
+    assert px(103, 0) == red  # treble 20
+    assert px(103, 18) == green  # treble 1 sits to the right of the 20
+    assert px(180, 0) == (20, 20, 20)  # off the scoring area

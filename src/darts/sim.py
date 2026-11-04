@@ -8,7 +8,7 @@ import mujoco
 import numpy as np
 
 from darts.aero import aero_wrench
-from darts.board import score_tip
+from darts.board import board_texture, score_tip
 from darts.twin import Twin
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -19,6 +19,7 @@ THROW_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex")
 # along the finger direction (-z), tip protruding forward. Placement found by experiment.
 GRIP_X_OFFSET = -0.0098  # fixed jaw plate surface; dart centre is radius further along +x
 GRIP_Z_CENTRE = -0.113
+HOLD_AFTER_HIT_S = 1.0  # extra simulated time recorded after the dart meets the board
 NO_POINT = (float("inf"), float("inf"))
 RELEASE_CONFIRM_STEPS = 5  # consecutive steps without pad contact that count as released
 CONTACT_IMPRATIO = 100.0
@@ -41,7 +42,7 @@ def _hand_collision_geoms(model: mujoco.MjModel) -> set[int]:
     }
 
 
-def build_model(twin: Twin) -> mujoco.MjModel:
+def build_model(twin: Twin, visual: bool = False) -> mujoco.MjModel:
     """Menagerie SO-101 on a stand, with a board marker, a free dart, and twin.yaml overrides."""
     spec = mujoco.MjSpec.from_file(str(SCENE))
     h = twin.mount.height_m
@@ -61,6 +62,18 @@ def build_model(twin: Twin) -> mujoco.MjModel:
         size=[twin.board.radius_m, 0.01, 0],
         rgba=[0.1, 0.1, 0.1, 1],
     )
+    if visual:  # a painted square in front of the face, for replays only
+        img = board_texture()
+        spec.add_texture(
+            name="board", type=mujoco.mjtTexture.mjTEXTURE_2D, width=img.shape[1],
+            height=img.shape[0], nchannel=3, data=img.ravel().tolist(),
+        )  # fmt: skip
+        spec.add_material(name="board", textures=["", "board"])
+        spec.worldbody.add_geom(
+            name="board_paint", type=mujoco.mjtGeom.mjGEOM_BOX, material="board",
+            pos=[twin.board.distance_m - 0.0005, 0, twin.board.centre_height_m],
+            size=[0.0005, twin.board.radius_m, twin.board.radius_m], contype=0, conaffinity=0,
+        )  # fmt: skip
     dart = spec.worldbody.add_body(name="dart")
     dart.add_freejoint()
     half = twin.dart.length_m / 2
@@ -257,6 +270,12 @@ class ThrowSim:
         a, v = self._dart_qadr, self._dart_vadr
         return self.data.qpos[a : a + 3].copy(), self.data.qvel[v : v + 3].copy()
 
+    def _command(self, p: ThrowParams, t: float) -> None:
+        for n, target in zip(THROW_JOINTS, p.q_end, strict=True):
+            self._slew(n, target)
+        if t >= p.t_release_s:
+            self._slew("gripper", self.twin.release.jaw_open_rad)
+
     def throw(
         self,
         p: ThrowParams,
@@ -276,19 +295,21 @@ class ThrowSim:
         off_pad_steps, first_off = 0, None
         t, next_frame = 0.0, 0.0
         prev = self.dart_state()[0]
+
+        def capture() -> None:
+            nonlocal next_frame
+            if render is not None and frames is not None and t >= next_frame:
+                frames.append(render())
+                next_frame += 1.0 / fps
+
         while t < p.t_release_s + max_time_s:
-            for n, target in zip(THROW_JOINTS, p.q_end, strict=True):
-                self._slew(n, target)
-            if t >= p.t_release_s:
-                self._slew("gripper", tw.release.jaw_open_rad)
+            self._command(p, t)
             pre_vel = self.dart_state()[1]
             if released:
                 self._apply_aero()
             mujoco.mj_step(m, d)
             t += dt
-            if render is not None and frames is not None and t >= next_frame:
-                frames.append(render())
-                next_frame += 1.0 / fps
+            capture()
             pos, vel = self.dart_state()
             if not (np.isfinite(pos).all() and np.isfinite(d.qacc).all()):
                 diverged = True
@@ -325,6 +346,18 @@ class ThrowSim:
                 if on_floor or pos[2] <= 0.0:
                     break
             prev = pos
+        if hit:  # keep recording after contact: a stuck dart stays put, a bounce plays out
+            a, v = self._dart_qadr, self._dart_vadr
+            pose = d.qpos[a : a + 7].copy()
+            for _ in range(round(HOLD_AFTER_HIT_S / dt)):
+                self._command(p, t)
+                if stuck:
+                    d.qpos[a : a + 7], d.qvel[v : v + 6] = pose, 0.0
+                else:
+                    self._apply_aero()
+                mujoco.mj_step(m, d)
+                t += dt
+                capture()
         shortfall = 0.0 if crossed else max(0.0, board_x - float(self.dart_state()[0][0]))
         return ThrowResult(
             released=released,

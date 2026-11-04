@@ -49,7 +49,13 @@ $ uv run darts eval --policy hand --n 100
 
 `--policy random` reaches the board 0% of the time. Both baselines are saved in `docs/baselines/`.
 
-Video needs a GL backend (EGL or OSMesa), so render on a GPU pod.
+Render one policy throw at a seeded board target to a slow-motion mp4 (needs `libosmesa6`, or EGL on a GPU pod; about 80 s with OSMesa):
+
+```console
+$ MUJOCO_GL=osmesa uv run darts replay --policy hand --seed 3 --out runs/replay.mp4
+target (+0.050, +0.004) m from centre; stuck=True score=16
+video: runs/replay.mp4
+```
 
 ## Contributing
 

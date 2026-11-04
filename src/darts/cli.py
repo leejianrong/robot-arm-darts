@@ -7,6 +7,8 @@ import sys
 from dataclasses import asdict
 from pathlib import Path
 
+import numpy as np
+
 from darts.sim import ThrowParams, ThrowSim, assets_available
 from darts.sweep import sweep
 from darts.twin import load_twin
@@ -33,8 +35,7 @@ def _scripted(args: argparse.Namespace) -> int:
         try:
             from darts.render import render_throw
 
-            sim = ThrowSim(twin)
-            render_throw(sim, ThrowParams(**report.best_params), out / "throw.mp4")
+            render_throw(twin, ThrowParams(**report.best_params), out / "throw.mp4")
             print(f"video                  : {out / 'throw.mp4'}")
         except Exception as e:  # no GL backend on this host is the usual cause
             print(f"video skipped ({type(e).__name__}: {e})", file=sys.stderr)
@@ -69,6 +70,26 @@ def _eval(args: argparse.Namespace) -> int:
     return 0 if result["meets_q13"] else 1
 
 
+def _replay(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.env import DartThrowEnv
+    from darts.interface import decode_action
+    from darts.policies import POLICIES
+    from darts.render import render_throw
+
+    twin = load_twin(args.twin)
+    env = DartThrowEnv(twin)
+    _, info = env.reset(seed=args.seed)
+    params, _ = decode_action(POLICIES[args.policy](env.state(), np.random.default_rng(args.seed)))
+    r = render_throw(twin, params, Path(args.out))
+    ty, tz = info["target_yz_m"]
+    print(f"target ({ty:+.3f}, {tz:+.3f}) m from centre; stuck={r.stuck} score={r.score}")
+    print(f"video: {args.out}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="darts")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -91,5 +112,10 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--n", type=int, default=100)
     ev.add_argument("--seed", type=int, default=0, help="first seed; the list is seed..seed+n-1")
     ev.add_argument("--twin", default="twin.yaml")
+    rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
+    rp.add_argument("--policy", choices=["random", "hand"], default="hand")
+    rp.add_argument("--seed", type=int, default=0)
+    rp.add_argument("--out", default="runs/replay.mp4")
+    rp.add_argument("--twin", default="twin.yaml")
     args = parser.parse_args(argv)
-    return {"throw": _scripted, "drop": _drop, "eval": _eval}[args.cmd](args)
+    return {"throw": _scripted, "drop": _drop, "eval": _eval, "replay": _replay}[args.cmd](args)
