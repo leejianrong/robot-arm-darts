@@ -18,6 +18,9 @@ dependencies = [
     "scipy>=1.18.1",
 ]
 
+[project.optional-dependencies]
+train = ["stable-baselines3>=2.7.0", "torch>=2.9.0"]
+
 [project.scripts]
 darts = "darts.cli:main"
 
@@ -51,3 +54,12 @@ select = ["E", "F", "I", "B", "UP", "SIM", "NPY"]
 include = ["src"]
 typeCheckingMode = "standard"
 pythonVersion = "3.12"
+
+# CPU-only torch: training here is CPU-bound MuJoCo, and the CUDA wheels are gigabytes.
+[tool.uv.sources]
+torch = { index = "pytorch-cpu" }
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true

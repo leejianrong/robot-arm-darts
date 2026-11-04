@@ -55,6 +55,26 @@ def _drop(args: argparse.Namespace) -> int:
     return 0 if r.stuck else 1
 
 
+def _load_policy(path: str):
+    from darts.train import load_policy
+
+    return load_policy(path)
+
+
+def _train(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    try:
+        from darts.train import train
+    except ImportError:
+        print("training needs the extra: `uv sync --extra train`", file=sys.stderr)
+        return 2
+    m = train(load_twin(args.twin), args.steps, args.n_envs, args.seed, args.scale, Path(args.out))
+    print(json.dumps(m, indent=2))
+    return 0 if m["held_out"]["meets_q13"] else 1
+
+
 def _eval(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
@@ -65,7 +85,8 @@ def _eval(args: argparse.Namespace) -> int:
 
     env = DartThrowEnv(load_twin(args.twin))
     seeds = list(range(args.seed, args.seed + args.n))
-    result = evaluate(env, POLICIES[args.policy], seeds) | {"policy": args.policy}
+    policy = POLICIES[args.policy] if args.policy in POLICIES else _load_policy(args.policy)
+    result = evaluate(env, policy, seeds) | {"policy": args.policy}
     print(json.dumps(result, indent=2))
     return 0 if result["meets_q13"] else 1
 
@@ -108,14 +129,23 @@ def main(argv: list[str] | None = None) -> int:
     drop.add_argument("--height", type=float, default=1.6, help="launch height, m")
     drop.add_argument("--twin", default="twin.yaml")
     ev = sub.add_parser("eval", help="evaluate a policy on seeded throws, JSON out")
-    ev.add_argument("--policy", choices=["random", "hand"], required=True)
+    ev.add_argument("--policy", required=True, help="random, hand, or a policy.zip from `train`")
     ev.add_argument("--n", type=int, default=100)
     ev.add_argument("--seed", type=int, default=0, help="first seed; the list is seed..seed+n-1")
     ev.add_argument("--twin", default="twin.yaml")
+    tr = sub.add_parser("train", help="train a PPO residual on the hand-tuned throw")
+    tr.add_argument("--steps", type=int, default=20_000)
+    tr.add_argument("--n-envs", type=int, default=8)
+    tr.add_argument("--seed", type=int, default=0)
+    tr.add_argument("--scale", type=float, default=0.25, help="size of the learned correction")
+    tr.add_argument("--out", default="runs/train")
+    tr.add_argument("--twin", default="twin.yaml")
     rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
     rp.add_argument("--policy", choices=["random", "hand"], default="hand")
     rp.add_argument("--seed", type=int, default=0)
     rp.add_argument("--out", default="runs/replay.mp4")
     rp.add_argument("--twin", default="twin.yaml")
     args = parser.parse_args(argv)
-    return {"throw": _scripted, "drop": _drop, "eval": _eval, "replay": _replay}[args.cmd](args)
+    return {"throw": _scripted, "drop": _drop, "eval": _eval, "train": _train, "replay": _replay}[
+        args.cmd
+    ](args)

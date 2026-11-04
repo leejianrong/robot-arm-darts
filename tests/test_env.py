@@ -90,3 +90,22 @@ def test_two_evals_with_the_same_seeds_give_identical_json():
     second = evaluate(env, POLICIES["hand"], list(range(10)))
     assert first == second
     assert first["n"] == 10  # the laptop smoke config
+
+
+def test_residual_env_adds_a_scaled_correction_to_the_hand_tuned_throw():
+    from darts.interface import decode_action
+    from darts.policies import hand_tuned_policy
+    from darts.train import ResidualEnv
+
+    seen = []
+
+    class Recorder(FakeSim):
+        def throw(self, params):
+            seen.append(params)
+            return self.result
+
+    env = ResidualEnv(DartThrowEnv(load_twin(), sim=Recorder(result())), scale=0.0)
+    env.reset(seed=4)
+    env.step(np.ones(ACTION_DIM))  # a scale of 0 ignores the agent entirely
+    hand = hand_tuned_policy(env.unwrapped.state(), np.random.default_rng(0))
+    assert seen[0] == decode_action(hand)[0]
