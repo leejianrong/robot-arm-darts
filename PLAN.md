@@ -116,7 +116,7 @@ Pods must be torn down on every path. The runner uses the runpod-jobs dead-man's
 | Q3 | Weld-or-bounce sticking, scored from tip contact point | Low. Only scoring edge cases change |
 | Q4 | Simple drag plus restoring-torque flight model | Medium. A poor fit at 1.0 m would shift hits by centimetres, and V9 sysid absorbs it |
 | Q5 | One `twin.yaml` is the only source of physical parameters | High if broken. Hard-coded numbers elsewhere would defeat the twin |
-| Q13 | Targets: ≥90% of throws on board and median tip error ≤3 cm on state | High. V1 shows 1.0 m sits near the arm's limit (best miss 9 cm), so the ≤3 cm target may need a shorter range or may not be reachable at all. V3 baselines: a fixed throw panned at the target gets median 8.3 cm. V4 will tell |
+| Q13 | Targets: ≥90% of throws on board and median tip error ≤3 cm on state | High. V1 shows 1.0 m sits near the arm's limit (best miss 9 cm), so the ≤3 cm target may need a shorter range or may not be reachable at all. V3 baselines: a fixed throw panned at the target gets median 9.0 cm. V4 will tell |
 
 ## Open risks
 

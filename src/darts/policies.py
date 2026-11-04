@@ -9,11 +9,12 @@ from darts.sim import ThrowParams
 
 Policy = Callable[[State, np.random.Generator], np.ndarray]
 
-# The best scripted throw at 1.0 m (V2 sweep, seed 1). It aims straight ahead at the centre.
+# The best scripted throw at 1.0 m (seed 1, searched after the spin-damping fix), aimed at the
+# centre. Whether it sticks is knife-edge in the twin: re-search after any aero change.
 _BEST = ThrowParams(
-    q_start=(-1.2691771656801212, -1.6484029807819554, -1.2818110129976354),
-    q_end=(0.29811470728461614, 1.3062195566002077, 0.5185272982128247),
-    t_release_s=0.18056548625667213,
+    q_start=(-1.3921612132548298, -1.589493535275797, -1.2271570582911078),
+    q_end=(1.23160442594621, -0.7088024495858529, 0.003932529510716521),
+    t_release_s=0.19277793609829927,
 )
 
 

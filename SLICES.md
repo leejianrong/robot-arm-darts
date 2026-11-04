@@ -53,7 +53,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Demo:** `darts drop --speed 5 --angle 25.7` launches a dart with no arm and prints a score of 60. No replay yet (video waits for RunPod). 501 logic is unit-tested, not yet played from the terminal.
 
-**Built as:** `aero.py` (drag, fin torque, spin damping from `twin.yaml`), `board.py` (scorer), `game.py` (501), a collidable board face, and stop-at-first-contact sticking (ADR-0005). The V1 best throw at 1.0 m is chaotic in the jaw release (a tiny drag flips hit to bounce), so the search was re-run with aero on: still a stuck hit, 5 cm off centre.
+**Built as:** `aero.py` (drag, fin torque, spin damping from `twin.yaml`), `board.py` (scorer), `game.py` (501), a collidable board face, and stop-at-first-contact sticking (ADR-0005). The V1 best throw at 1.0 m is chaotic in the jaw release (a tiny drag flips hit to bounce), so the search was re-run with aero on: still a stuck hit, 8 cm off centre after re-tuning for the fixed spin damping. Whether a dart sticks is very sensitive to dart attitude at arrival: one throw went from 196/200 stuck to 0/200 when spin damping changed tenfold.
 
 **Rests on assumptions:** Q3, Q4.
 
@@ -87,7 +87,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Demo:** `darts eval --policy random --n 100` prints median and 90th percentile tip error and the hit rate, as JSON.
 
-**Built as:** `interface.py` (state, 8-number action with `shoulder_pan` for aiming sideways), `env.py`, `policies.py`, `evaluate.py`. Baselines on 100 seeds (`docs/baselines/`): random 0% on board; hand-tuned (best V2 throw, panned to the target, height ignored) 97% on board, median 8.3 cm, p90 19.7 cm. V4 has to beat that to reach 3 cm.
+**Built as:** `interface.py` (state, 8-number action with `shoulder_pan` for aiming sideways), `env.py`, `policies.py`, `evaluate.py`. Baselines on 100 seeds (`docs/baselines/`): random 0% on board; hand-tuned (best V2 throw, panned to the target, height ignored) 97% on board and 78% stuck, median 9.0 cm, p90 22.5 cm. V4 has to beat that to reach 3 cm.
 
 **Rests on assumptions:** Q13.
 

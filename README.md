@@ -28,8 +28,8 @@ Search for the best scripted throw at the board distance in `twin.yaml` (about 4
 
 ```console
 $ uv run darts throw --scripted --no-video
-max release speed seen : 4.58 m/s
-best throw             : release 3.00 m/s at 46 deg, 1.64 m high; misses board centre by 0.05 m
+max release speed seen : 4.63 m/s
+best throw             : release 3.07 m/s at 43 deg, 1.65 m high; misses board centre by 0.08 m
 hits the board at 1.0 m? : YES
 ```
 
@@ -44,7 +44,7 @@ Score a baseline policy on 100 seeded throws at random board targets (JSON out, 
 
 ```console
 $ uv run darts eval --policy hand --n 100
-{"on_board_rate": 0.97, "median_tip_error_m": 0.083, "p90_tip_error_m": 0.197, "meets_q13": false, ...}
+{"on_board_rate": 0.97, "median_tip_error_m": 0.090, "p90_tip_error_m": 0.225, "meets_q13": false, ...}
 ```
 
 `--policy random` reaches the board 0% of the time. Both baselines are saved in `docs/baselines/`.
