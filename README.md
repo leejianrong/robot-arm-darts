@@ -2,7 +2,7 @@
 
 A MuJoCo digital twin of an SO-101 robot arm that learns to throw a 10 g dart at a regulation-height dartboard. Everything calibratable lives in `twin.yaml`, so the numbers can be tuned to a real arm once you have one.
 
-Status: early. The arm throws in simulation, and darts fly with drag, stick or bounce, and score on a regulation board, but there is no learned policy yet. Reach is the open problem: the earlier "1.0 m works" result relied on a tumbling dart ([feasibility results](docs/v1-feasibility.md)).
+Status: early. The arm throws in simulation, and darts fly with drag, stick or bounce, and score on a regulation board, but there is no learned policy yet. Reach is the limit: holding the dart across the fingers (wrist rolled 90°) lets the arm release it along its direction of travel, but at the 4.5 rad/s servo limit it only reaches a board 0.5 m away, and lands low ([feasibility results](docs/v1-feasibility.md)).
 
 ```mermaid
 flowchart LR
@@ -24,17 +24,17 @@ Needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
 
 ## Usage
 
-Search for the best scripted throw at the board distance in `twin.yaml` (about 4 minutes; add `--maxiter 5` for a quick look):
+Search for the best scripted throw at the board distance in `twin.yaml` (about 10 minutes; add `--maxiter 5` for a quick look):
 
 ```console
 $ uv run darts throw --scripted --no-video
-max release speed seen : 3.88 m/s
-best throw             : release 2.63 m/s at 51 deg, 1.17 m high; misses board centre by 0.18 m
-release attitude       : 76 deg off its direction of travel, spinning 4.9 rad/s
-hits the board at 1.0 m? : NO
+max release speed seen : 4.33 m/s
+best throw             : release 2.49 m/s at 11 deg, 1.70 m high; misses board centre by 0.15 m
+release attitude       : 22 deg off its direction of travel, spinning 7.8 rad/s; arrives 40 deg off the board normal
+hits the board at 0.5 m? : YES
 ```
 
-A hit needs a clean release (the dart leaves nose-forward and barely spinning). The search used to find tumbling throws that stick by luck and now rejects them, so at 1.0 m the answer is currently NO ([details](docs/v1-feasibility.md)). It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. Launch a dart in free flight with no arm and see where it lands (exit 0 if it sticks):
+A fast hand always rotates, so the dart leaves spinning and the search judges it by how it arrives (within 0.7 rad of square to the board), then `darts robust` checks the throw against the aero guesses and release timing. It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. At 1.0 m the answer is NO. Launch a dart in free flight with no arm and see where it lands (exit 0 if it sticks):
 
 ```console
 $ uv run darts drop --speed 5 --angle 25.7
@@ -45,7 +45,7 @@ Score a baseline policy on 100 seeded throws at random board targets (JSON out, 
 
 ```console
 $ uv run darts eval --policy hand --n 100
-{"on_board_rate": 0.97, "median_tip_error_m": 0.090, "p90_tip_error_m": 0.225, "meets_q13": false, ...}
+{"on_board_rate": 0.71, "stuck_rate": 0.71, "median_tip_error_m": 0.244, "meets_q13": false, ...}
 ```
 
 `--policy random` reaches the board 0% of the time. Both baselines are saved in `docs/baselines/`.

@@ -29,6 +29,14 @@ Assumptions that move the result: servo speed (datasheet 4.71 rad/s, measure on 
 
 The release attitude was not recorded in V1 or V2. Measuring it (`release_misalign_rad`, `release_spin_rad_s`) showed that the best throws release the dart about **95° off its direction of travel, spinning at about 14 rad/s**. The dart tumbles end over end for the whole flight, and whether it sticks depends on which way it happens to point when it arrives: moving the release time by 1 ms changed the arrival angle from 18° to 151°. A real throw releases the dart nose-forward. With the dart held along the fingers, the arm's whip motion moves the fingertip sideways to the fingers, so a clean release needs a different motion.
 
-The search now penalises a tumbling release (more than 20° off, or more than 3 rad/s), and a hit only counts when the release is clean. At 1.0 m it finds nothing: the best throw is 2.6 m/s, 18 cm off centre, still 76° off and spinning at 4.9 rad/s. The tumbling throws stuck on only 9 of 18 plausible aero settings (`darts robust`), so those hits were not trustworthy either.
+The search first penalised a tumbling release and found nothing at 1.0 m. So 1.0 m was **not** shown to be reachable with a believable throw.
 
-So 1.0 m is **not** shown to be reachable with a believable throw. Options: hold the dart across the fingers (wrist rolled 90°) so the whip carries it nose-first, or shorten the range.
+## Update (cross grip): the reach at the 4.5 rad/s limit is about 0.5 m
+
+The dart is now held across the fingers with the wrist rolled 90° (`GRIP_ROLL_RAD`, `_DART_IN_GRIP` in `sim.py`), so its axis lies in the swing plane and leaves along its direction of travel (a test checks this). Findings, from searches of 4,000 to 12,000 throws per distance:
+
+- **Spin cannot be avoided.** A hand that moves fast also rotates (a hand rotating at zero speed moves at 0.5 m/s). The dart leaves spinning at 6 to 18 rad/s, so the search judges the arrival angle, with 0.7 rad as its margin inside the 0.9 rad stick limit, not the release.
+- **Speed is the limit.** The best usable release is about 2.8 m/s. Best misses were 0.38 m at 1.0 m, 0.25 m at 0.9 m, 0.23 m at 0.8 m and 0.18 m at 0.7 m (not on the board); at 0.5 m a dart sticks 15 cm below the centre.
+- **The 0.5 m throw is fairly robust.** It sticks in 83% of 54 variants (aero guesses x release time within 10 ms), median miss 15 cm. It sits at the lower rim because a higher release angle makes the dart arrive too slanted.
+- **The grip is marginal.** The jaws pinch at their tip edges, the dart creeps out after about 0.45 s of swinging, and the search is limited to releases before that.
+- **The solver warnings were the post-contact replay.** MuJoCo prints "unstable" while the bounce after a hit plays out (a thin 10 g capsule), and resets itself. That only ran for replays after the result was recorded, so it never touched a score. It now runs only when rendering. Throws that go unstable before the result are flagged `diverged`, including when MuJoCo resets silently.

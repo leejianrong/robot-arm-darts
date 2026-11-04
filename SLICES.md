@@ -53,7 +53,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Demo:** `darts drop --speed 5 --angle 25.7` launches a dart with no arm and prints a score of 60. No replay yet (video waits for RunPod). 501 logic is unit-tested, not yet played from the terminal.
 
-**Built as:** `aero.py` (drag, fin torque, spin damping from `twin.yaml`), `board.py` (scorer), `game.py` (501), a collidable board face, and stop-at-first-contact sticking (ADR-0005). The V1 best throw at 1.0 m is chaotic in the jaw release (a tiny drag flips hit to bounce), so the search was re-run with aero on: still a stuck hit, 8 cm off centre after re-tuning for the fixed spin damping. Whether a dart sticks is very sensitive to dart attitude at arrival: one throw went from 196/200 stuck to 0/200 when spin damping changed tenfold.
+**Built as:** `aero.py` (drag, fin torque, spin damping from `twin.yaml`), `board.py` (scorer), `game.py` (501), a collidable board face, and stop-at-first-contact sticking (ADR-0005). The V1 best throw at 1.0 m is chaotic in the jaw release (a tiny drag flips hit to bounce), so the search was re-run with aero on: still a stuck hit, 8 cm off centre after re-tuning for the fixed spin damping. Whether a dart sticks is very sensitive to dart attitude at arrival: one throw went from 196/200 stuck to 0/200 when spin damping changed tenfold. Later finding: that throw tumbled; the cross grip reaches 0.5 m (docs/v1-feasibility.md).
 
 **Rests on assumptions:** Q3, Q4.
 
@@ -213,7 +213,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Demo:** A replay of a throw where the overlay shows the estimated and true board target, and the dart lands near it.
 
-**Rests on assumptions:** the detector works at 1.0 m with a 640×480 image (checked in the first build step).
+**Rests on assumptions:** the detector works at the board distance (0.5 m) with a 640×480 image (checked in the first build step).
 
 ### Test plan
 
@@ -223,7 +223,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 #### Integration
 
-- Estimated target is within 1 cm of the true target at 1.0 m for 95% of 500 random board poses.
+- Estimated target is within 1 cm of the true target at the board distance (0.5 m) for 95% of 500 random board poses.
 - Policy trained with the V7 error model beats one trained on perfect state when the estimator is in the loop.
 
 #### Unit

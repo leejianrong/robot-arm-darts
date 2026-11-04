@@ -4,7 +4,7 @@ MuJoCo digital twin of an SO-101 arm that learns to throw a 10 g dart at a regul
 
 ## Status
 
-Trust the code over the docs where they disagree, then fix the docs. Built: V1 (throw feasibility, `docs/v1-feasibility.md`). Next: V2. Feasible range with a clean (nose-forward) release is not established: 1.0 m only worked with a tumbling dart. Check `darts robust` before trusting any hit.
+Trust the code over the docs where they disagree, then fix the docs. Built through V4 minus a trained policy. The board is at 0.5 m: the cross grip (wrist roll 90°) at the 4.5 rad/s servo limit reaches no further (`docs/v1-feasibility.md`). Training is on hold until throws are believable and robust; run `darts robust` before trusting any hit.
 
 ## Commands
 
@@ -17,6 +17,7 @@ Trust the code over the docs where they disagree, then fix the docs. Built: V1 (
 ## Rules that are not obvious
 
 - Calibratable physical numbers live only in `twin.yaml` (ADR-0006). Solver contact settings in `sim.py` (`CONTACT_*`) are tuned, not physical; changing them lets the dart slip or creep (ADR-0008).
+- The dart is held across the fingers (`GRIP_*` in `sim.py`); the pinch creeps out after about 0.45 s, so releases come before that. Judge throws by arrival angle and `darts robust`, not by release attitude: a fast hand always spins the dart.
 - A sweep or training result that looks too good (release speed over 6 m/s, hits from a downward release) is a solver or collision artifact until proven otherwise.
 - Aero coefficients and the stick thresholds are guesses until real data exists (ADR-0005).
 - Never print or commit the RunPod API key; it comes from the environment only.

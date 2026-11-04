@@ -22,4 +22,4 @@ The twin target is the SO-101 (five joints plus a two-jaw gripper). The sim star
 
 ## Consequences
 
-Cheap and well documented, with a ready MJCF. The cost is limited power: servo speed caps the release velocity, and a 1.5 m throw proved infeasible in V1; the range is now 1.0 m (see PLAN risk and docs/v1-feasibility.md). The model's servo behaviour is idealised until it is fitted to hardware.
+Cheap and well documented, with a ready MJCF. The cost is limited power: servo speed caps the release velocity, and a 1.5 m throw proved infeasible in V1; the range is now 0.5 m (see PLAN risk and docs/v1-feasibility.md). The model's servo behaviour is idealised until it is fitted to hardware.

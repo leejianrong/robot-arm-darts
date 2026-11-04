@@ -21,7 +21,7 @@ release:
   jaw_open_rad: 1.0          # jaw command at release
   pad_friction: 1.0          # jaw pad friction coefficient (Menagerie default; measure on hardware)
 board:                       # regulation: centre 1.73 m above floor, scoring radius 170 mm
-  distance_m: 1.0            # from the arm base axis; V1 found 1.2 m unreachable at the 4.5 rad/s servo limit
+  distance_m: 0.5            # from the arm base axis; the 4.5 rad/s servo limit reaches about 0.5 m with a nose-first release
   centre_height_m: 1.73
   radius_m: 0.17
   stick_min_speed_m_s: 2.0   # guess: slower than this at the tip and the dart bounces off the cork
