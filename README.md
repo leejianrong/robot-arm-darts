@@ -1,19 +1,44 @@
 # Robot Arm Darts
 
-A MuJoCo digital twin of an SO-101 robot arm that learns to throw a 10 g dart at a regulation-height dartboard. Everything calibratable lives in `twin.yaml`, so the numbers can be tuned to match a real arm later.
+A MuJoCo digital twin of an SO-101 robot arm that learns to throw a 10 g dart at a regulation-height dartboard. Everything calibratable lives in `twin.yaml`, so the numbers can be tuned to a real arm once you have one.
 
-Status: early. The plan is in [`PLAN.md`](PLAN.md), the build order in [`SLICES.md`](SLICES.md), and the decisions in [`docs/adr/`](docs/adr/).
+Status: early. The arm throws in simulation, but there is no learned policy yet. Under the real servo limits the board has to sit about 1.0 m away ([feasibility results](docs/v1-feasibility.md)).
+
+```mermaid
+flowchart LR
+    cam[virtual camera] --> est[state estimator] --> pol[throw policy] --> arm[SO-101 sim] --> dart[dart and board]
+    twin[(twin.yaml)] -.-> arm
+```
+
+Only the arm and dart exist today. The camera, estimator and policy are the next slices ([`SLICES.md`](SLICES.md)).
 
 ## Quick start
 
 ```bash
 make install     # uv sync
-make assets      # fetch the Menagerie SO-101 model (Apache-2.0)
+make assets      # fetch the Menagerie SO-101 model
 make check       # lint, type-check, fast tests
 ```
 
-Training and rendering are meant to run on a rented GPU pod (RunPod); the laptop only edits and reads results.
+Needs Python 3.12 and [uv](https://docs.astral.sh/uv/).
+
+## Usage
+
+Search for the best scripted throw at the board distance in `twin.yaml` (about 4 minutes; add `--maxiter 5` for a quick look):
+
+```console
+$ uv run darts throw --scripted --no-video
+max release speed seen : 4.88 m/s
+best throw             : release 3.14 m/s at 48 deg, 1.62 m high; misses board centre by 0.09 m
+hits the board at 1.0 m? : YES
+```
+
+It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. Video needs a GL backend (EGL or OSMesa), so render on a GPU pod.
+
+## Contributing
+
+Conventions are in [`CLAUDE.md`](CLAUDE.md). Training and rendering are meant for a rented GPU pod (RunPod).
 
 ## License
 
-Apache-2.0. The SO-101 model is from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), also Apache-2.0, and is fetched at setup rather than redistributed.
+Apache-2.0. The SO-101 model comes from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie), also Apache-2.0, and is fetched at setup, not redistributed.

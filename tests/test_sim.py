@@ -36,7 +36,7 @@ def test_dart_stays_gripped_at_rest(twin):
     for _ in range(round(2.0 / sim.model.opt.timestep)):
         sim._slew("gripper", twin.release.jaw_hold_rad)
         mujoco.mj_step(sim.model, sim.data)
-    assert sim.dart_touches_gripper()
+    assert sim.dart_contacts()[0]
     assert np.linalg.norm(_rel_to_gripper(sim) - before) < 1e-3
 
 

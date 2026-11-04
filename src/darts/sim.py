@@ -14,7 +14,7 @@ SCENE = ROOT / "assets" / "menagerie" / "robotstudio_so101" / "scene.xml"
 ARM_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
 THROW_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex")
 # Dart pose in the gripper frame: pinched at the fingertips against the fixed jaw plate, barrel
-# along the finger direction (-z), tip protruding forward. Found by experiment (see scratch notes).
+# along the finger direction (-z), tip protruding forward. Placement found by experiment.
 GRIP_X_OFFSET = -0.0098  # fixed jaw plate surface; dart centre is radius further along +x
 GRIP_Z_CENTRE = -0.113
 RELEASE_CONFIRM_STEPS = 5  # consecutive steps without pad contact that count as released
@@ -155,9 +155,6 @@ class ThrowSim:
             self._slew("gripper", self.twin.release.jaw_hold_rad)
             mujoco.mj_step(self.model, d)
 
-    def jaw_angle(self) -> float:
-        return float(self.data.qpos[self._qadr("gripper")])
-
     def dart_contacts(self) -> tuple[bool, bool, bool]:
         """(touching a jaw pad, touching the arm or stand, touching the floor)."""
         pad = other = floor = False
@@ -174,9 +171,6 @@ class ThrowSim:
             else:
                 other = True
         return pad, other, floor
-
-    def dart_touches_gripper(self) -> bool:
-        return self.dart_contacts()[0]
 
     def _slew(self, name: str, target: float) -> None:
         """Rate-limit the position command to the servo velocity limit."""

@@ -33,9 +33,7 @@ def _scripted(args: argparse.Namespace) -> int:
             from darts.render import render_throw
 
             sim = ThrowSim(twin)
-            render_throw(
-                sim, ThrowParams(**{k: v for k, v in report.best_params.items()}), out / "throw.mp4"
-            )
+            render_throw(sim, ThrowParams(**report.best_params), out / "throw.mp4")
             print(f"video                  : {out / 'throw.mp4'}")
         except Exception as e:  # no GL backend on this host is the usual cause
             print(f"video skipped ({type(e).__name__}: {e})", file=sys.stderr)
