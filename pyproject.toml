@@ -1,0 +1,51 @@
+[project]
+name = "darts"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "leejianrong", email = "85485699+leejianrong@users.noreply.github.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "gymnasium>=1.4.0",
+    "imageio>=2.38.1",
+    "imageio-ffmpeg>=0.8.1",
+    "mujoco>=3.17.0",
+    "numpy>=2.5.4",
+    "pyyaml>=6.0.3",
+    "scipy>=1.18.1",
+]
+
+[project.scripts]
+darts = "darts.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.9.16,<0.10.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.414",
+    "pytest>=9.2.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.17.3",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+    "integration: needs the MuJoCo model assets or heavy sim (not run in the pre-push gate)",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "NPY"]
+
+[tool.pyright]
+include = ["src"]
+typeCheckingMode = "standard"
+pythonVersion = "3.12"

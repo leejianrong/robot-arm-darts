@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Fast gate. Skip rarely with: git push --no-verify
+set -euo pipefail
+make check
