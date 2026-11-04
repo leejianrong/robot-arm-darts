@@ -61,10 +61,11 @@ def load_policy(path: str | Path) -> Policy:
 
 def train(twin: Twin, steps: int, n_envs: int, seed: int, scale: float, out: Path) -> dict:
     from stable_baselines3 import PPO
+    from stable_baselines3.common.monitor import Monitor
     from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
 
     def make():
-        return ResidualEnv(DartThrowEnv(twin), scale)
+        return Monitor(ResidualEnv(DartThrowEnv(twin), scale))  # Monitor logs ep_rew_mean
 
     venv = (
         SubprocVecEnv([make] * n_envs, start_method="forkserver")

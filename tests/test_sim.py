@@ -137,14 +137,24 @@ def test_a_stuck_dart_stays_put_while_the_replay_keeps_recording(twin):
     from pathlib import Path
 
     best = json.loads((Path(__file__).parents[1] / "docs/baselines/best_throw.json").read_text())
-    p = ThrowParams(tuple(best["q_start"]), tuple(best["q_end"]), best["t_release_s"])
     sim, tips = ThrowSim(twin), []
+    # Sticking is knife-edge in the release, so look a few release times around the best throw.
+    for dt in (0.0, 0.002, -0.002, 0.004, -0.004, 0.006, -0.006):
+        p = ThrowParams(tuple(best["q_start"]), tuple(best["q_end"]), best["t_release_s"] + dt)
+        if sim.throw(p).stuck:
+            break
 
     def render():
         tips.append(sim.dart_state()[0].copy())
         return np.zeros((1, 1, 3))
 
     r = sim.throw(p, frames=[], render=render, fps=60)
-    assert r.stuck
+    assert r.stuck, "no nearby release time sticks; re-run `darts throw --scripted`"
     hold = tips[-30:]  # the last half second of recording is all hold
     assert max(np.linalg.norm(t - hold[0]) for t in hold) < 1e-9
+
+
+def test_spin_damping_is_stable_at_the_timestep(twin):
+    """Explicit damping blows up when c*dt/I nears 2 (it did at 1.64 on the dart's thin axis)."""
+    inertia = build_model(twin).body_inertia[build_model(twin).body("dart").id]
+    assert twin.aero.spin_damping_nm_s * twin.sim.timestep_s / inertia.min() < 0.5
