@@ -12,6 +12,10 @@ dart:
   mass_kg: 0.010
   length_m: 0.12
   radius_m: 0.0035           # 7 mm barrel: the SO-101 jaw gap at its closed limit is about 7 mm
+aero:                        # guesses for a 10 g dart with flights; fit to real flights (V9 sysid)
+  drag_kg_m: 7.2e-5          # 0.5 * 1.2 kg/m^3 * Cd 1.0 * 1.2 cm^2
+  fin_torque_nm: 1.5e-5      # N m per (m/s)^2 per radian of misalignment
+  spin_damping_nm_s: 5.0e-5
 release:
   jaw_hold_rad: -0.17        # jaw command while holding (squeezes against the dart, torque-limited)
   jaw_open_rad: 1.0          # jaw command at release
@@ -20,5 +24,7 @@ board:                       # regulation: centre 1.73 m above floor, scoring ra
   distance_m: 1.0            # from the arm base axis; V1 found 1.2 m unreachable at the 4.5 rad/s servo limit
   centre_height_m: 1.73
   radius_m: 0.17
+  stick_min_speed_m_s: 2.0   # guess: slower than this at the tip and the dart bounces off the cork
+  stick_max_angle_rad: 0.9   # guess: more than ~50 deg off the board normal and it glances off
 mount:
   height_m: 1.2              # arm base above the floor (a stand about waist height)

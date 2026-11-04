@@ -9,10 +9,12 @@ def result(**kw):
         release_angle_rad=0.7,
         release_height_m=1.6,
         crossed_plane=True,
-        miss_m=0.1,
+        board_yz=(0.0, 0.1),
         shortfall_m=0.0,
         hit_board=True,
     )
+    if "miss_m" in kw:
+        kw["board_yz"] = (0.0, kw.pop("miss_m"))
     base.update(kw)
     return ThrowResult(**base)
 
@@ -41,3 +43,7 @@ def test_invalid_throws_rank_last():
     for flag in ("slipped_early", "diverged", "collided"):
         assert cost(result(**{flag: True})) > worst_valid
     assert cost(result(released=False)) > worst_valid
+
+
+def test_a_bounce_costs_more_than_a_dart_that_sticks():
+    assert cost(result(stuck=False, miss_m=0.01)) > cost(result(stuck=True, miss_m=0.15))

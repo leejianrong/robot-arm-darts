@@ -51,7 +51,9 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 3. Implement stick-or-bounce on tip contact.
 4. Write a pure-Python scorer from a tip point to a score, and a 501 game state machine (three darts per turn, double-out, bust).
 
-**Demo:** Drop darts from fixed launch velocities. The replay shows them sticking at different board points with the score overlaid. A scripted 501 game runs in the terminal.
+**Demo:** `darts drop --speed 5 --angle 25.7` launches a dart with no arm and prints a score of 60. No replay yet (video waits for RunPod). 501 logic is unit-tested, not yet played from the terminal.
+
+**Built as:** `aero.py` (drag, fin torque, spin damping from `twin.yaml`), `board.py` (scorer), `game.py` (501), a collidable board face, and stop-at-first-contact sticking (ADR-0005). The V1 best throw at 1.0 m is chaotic in the jaw release (a tiny drag flips hit to bounce), so the search was re-run with aero on: still a stuck hit, 5 cm off centre.
 
 **Rests on assumptions:** Q3, Q4.
 

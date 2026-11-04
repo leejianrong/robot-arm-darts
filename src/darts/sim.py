@@ -1,12 +1,14 @@
 # pyright: reportAttributeAccessIssue=false
 """SO-101 on a stand, a dart held by jaw friction, and a scripted planar throw (V1)."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import mujoco
 import numpy as np
 
+from darts.aero import aero_wrench
+from darts.board import score_tip
 from darts.twin import Twin
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -17,6 +19,7 @@ THROW_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex")
 # along the finger direction (-z), tip protruding forward. Placement found by experiment.
 GRIP_X_OFFSET = -0.0098  # fixed jaw plate surface; dart centre is radius further along +x
 GRIP_Z_CENTRE = -0.113
+NO_POINT = (float("inf"), float("inf"))
 RELEASE_CONFIRM_STEPS = 5  # consecutive steps without pad contact that count as released
 CONTACT_IMPRATIO = 100.0
 CONTACT_SOLREF = (0.004, 1.0)
@@ -50,14 +53,12 @@ def build_model(twin: Twin) -> mujoco.MjModel:
         size=[0.05, 0.05, (h - 0.003) / 2],
         rgba=[0.4, 0.4, 0.45, 1],
     )
-    spec.worldbody.add_geom(  # visual board face, no collision (the scored board arrives in V2)
+    spec.worldbody.add_geom(  # board face: darts that fail the stick test bounce off it
         name="board_face",
         type=mujoco.mjtGeom.mjGEOM_CYLINDER,
         pos=[twin.board.distance_m + 0.01, 0, twin.board.centre_height_m],
         quat=[0.70710678, 0, 0.70710678, 0],
         size=[twin.board.radius_m, 0.01, 0],
-        contype=0,
-        conaffinity=0,
         rgba=[0.1, 0.1, 0.1, 1],
     )
     dart = spec.worldbody.add_body(name="dart")
@@ -104,12 +105,18 @@ class ThrowResult:
     release_angle_rad: float  # above horizontal
     release_height_m: float
     crossed_plane: bool  # reached the board plane before hitting the floor or timing out
-    miss_m: float  # distance from board centre where it crossed (inf if it never crossed)
+    board_yz: tuple[float, float]  # contact or crossing point relative to the centre (inf if none)
     shortfall_m: float  # how far short of the board plane it ended (0 if it crossed)
     hit_board: bool  # crossed inside the scoring radius
     slipped_early: bool = False  # dart left the jaws before the release command
     diverged: bool = False  # the solver blew up (non-finite state); the throw is invalid
-    collided: bool = False  # the dart touched the arm, stand or floor outside the jaw pads
+    collided: bool = False  # the dart touched the arm or stand outside the jaw pads
+    stuck: bool = False  # the tip hit the board fast and square enough to stick
+    score: int = 0  # points for a stuck dart
+
+    @property
+    def miss_m(self) -> float:
+        return float(np.hypot(*self.board_yz))
 
 
 class ThrowSim:
@@ -123,6 +130,7 @@ class ThrowSim:
         self._gripper_body = m.body("gripper").id
         self._dart_geom = m.geom("dart_barrel").id
         self._floor_geom = m.geom("floor").id
+        self._board_geom = m.geom("board_face").id
         self._dart_body = m.body("dart").id
         self._dart_qadr = int(m.jnt_qposadr[m.body_jntadr[self._dart_body]])
         self._dart_vadr = int(m.jnt_dofadr[m.body_jntadr[self._dart_body]])
@@ -156,7 +164,7 @@ class ThrowSim:
             mujoco.mj_step(self.model, d)
 
     def dart_contacts(self) -> tuple[bool, bool, bool]:
-        """(touching a jaw pad, touching the arm or stand, touching the floor)."""
+        """(touching a jaw pad, touching the arm or stand, touching the floor); never the board."""
         pad = other = floor = False
         d = self.data
         for i in range(d.ncon):
@@ -168,9 +176,70 @@ class ThrowSim:
                 pad = True
             elif self._floor_geom in pair:
                 floor = True
-            else:
+            elif self._board_geom not in pair:
                 other = True
         return pad, other, floor
+
+    def _board_contact(self, pre_vel: np.ndarray) -> tuple[bool, float, float] | None:
+        """If the dart touches the board: (sticks, y, z) of the contact relative to the centre.
+
+        `pre_vel` is the velocity before the step; the contacts belong to that state.
+        """
+        d, b = self.data, self.twin.board
+        for i in range(d.ncon):
+            c = d.contact[i]
+            if {int(c.geom1), int(c.geom2)} == {self._dart_geom, self._board_geom}:
+                axis_x = d.xmat[self._dart_body].reshape(3, 3)[0, 2]  # tip direction vs normal
+                stick = (
+                    pre_vel[0] >= b.stick_min_speed_m_s
+                    and np.arccos(np.clip(axis_x, -1, 1)) <= b.stick_max_angle_rad
+                )
+                return bool(stick), float(c.pos[1]), float(c.pos[2] - b.centre_height_m)
+        return None
+
+    def _apply_aero(self) -> None:
+        d, a = self.data, self._dart_vadr
+        rot = d.xmat[self._dart_body].reshape(3, 3)
+        force, torque = aero_wrench(
+            d.qvel[a : a + 3], rot @ d.qvel[a + 3 : a + 6], rot[:, 2], self.twin.aero
+        )
+        d.xfrc_applied[self._dart_body] = (*force, *torque)
+
+    def launch(
+        self, pos: tuple[float, float, float], vel: tuple[float, float, float], max_time_s=2.0
+    ) -> ThrowResult:
+        """Free flight of the dart from `pos` with velocity `vel`, tip first, no arm involved."""
+        m, d = self.model, self.data
+        mujoco.mj_resetData(m, d)
+        v = np.asarray(vel, dtype=float)
+        z = v / np.linalg.norm(v)
+        x = np.cross([0.0, 1.0, 0.0], z)
+        x /= np.linalg.norm(x)
+        quat = np.empty(4)
+        mujoco.mju_mat2Quat(quat, np.column_stack([x, np.cross(z, x), z]).flatten())
+        a, b = self._dart_qadr, self._dart_vadr
+        d.qpos[a : a + 3], d.qpos[a + 3 : a + 7], d.qvel[b : b + 3] = pos, quat, v
+        speed = float(np.linalg.norm(v))
+        angle = float(np.arctan2(v[2], np.hypot(v[0], v[1])))
+        base = ThrowResult(True, speed, angle, pos[2], False, NO_POINT, 0.0, False)
+        for _ in range(round(max_time_s / m.opt.timestep)):
+            pre_vel = d.qvel[b : b + 3].copy()
+            self._apply_aero()
+            mujoco.mj_step(m, d)
+            if (c := self._board_contact(pre_vel)) is not None:
+                stuck, y, zc = c
+                return replace(
+                    base, crossed_plane=True, board_yz=(y, zc), hit_board=True, stuck=stuck,
+                    score=score_tip(y, zc).points if stuck else 0,
+                )  # fmt: skip
+            at = self.dart_state()[0]
+            if at[0] >= self.twin.board.distance_m:  # flew past the board face, high or wide
+                yz = (float(at[1]), float(at[2] - self.twin.board.centre_height_m))
+                return replace(base, crossed_plane=True, board_yz=yz)
+            if self.dart_contacts()[2] or at[2] <= 0.0:
+                break
+        short = max(0.0, self.twin.board.distance_m - self.dart_state()[0][0])
+        return replace(base, shortfall_m=short)
 
     def _slew(self, name: str, target: float) -> None:
         """Rate-limit the position command to the servo velocity limit."""
@@ -197,8 +266,8 @@ class ThrowSim:
         dt = m.opt.timestep
         board_x, zc = tw.board.distance_m, tw.board.centre_height_m
         released, speed, angle, height = False, 0.0, 0.0, 0.0
-        crossed, miss, hit, slipped, diverged = False, float("inf"), False, False, False
-        collided = False
+        crossed, yz, hit, slipped, diverged = False, NO_POINT, False, False, False
+        collided, stuck, score = False, False, 0
         off_pad_steps, first_off = 0, None
         t, next_frame = 0.0, 0.0
         prev = self.dart_state()[0]
@@ -207,6 +276,9 @@ class ThrowSim:
                 self._slew(n, target)
             if t >= p.t_release_s:
                 self._slew("gripper", tw.release.jaw_open_rad)
+            pre_vel = self.dart_state()[1]
+            if released:
+                self._apply_aero()
             mujoco.mj_step(m, d)
             t += dt
             if render is not None and frames is not None and t >= next_frame:
@@ -234,11 +306,16 @@ class ThrowSim:
                     angle = float(np.arctan2(v_off[2], np.hypot(v_off[0], v_off[1])))
                     height = float(p_off[2])
             if released:
+                if (c := self._board_contact(pre_vel)) is not None:
+                    stuck, y, zb = c
+                    yz, crossed, hit = (y, zb), True, True
+                    score = score_tip(y, zb).points if stuck else 0
+                    break
                 if prev[0] < board_x <= pos[0]:
                     f = (board_x - prev[0]) / (pos[0] - prev[0])
                     cross = prev + f * (pos - prev)
-                    miss = float(np.hypot(cross[1], cross[2] - zc))
-                    crossed, hit = True, miss <= tw.board.radius_m
+                    yz = (float(cross[1]), float(cross[2] - zc))
+                    crossed, hit = True, np.hypot(*yz) <= tw.board.radius_m
                     break
                 if on_floor or pos[2] <= 0.0:
                     break
@@ -250,10 +327,12 @@ class ThrowSim:
             release_angle_rad=angle,
             release_height_m=height,
             crossed_plane=crossed,
-            miss_m=miss,
+            board_yz=yz,
             shortfall_m=shortfall,
             hit_board=hit,
             slipped_early=slipped,
             diverged=diverged,
             collided=collided,
+            stuck=stuck,
+            score=score,
         )

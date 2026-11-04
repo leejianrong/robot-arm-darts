@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import math
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -40,6 +41,19 @@ def _scripted(args: argparse.Namespace) -> int:
     return 0 if report.reaches_board else 1
 
 
+def _drop(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    sim = ThrowSim(load_twin(args.twin))
+    ang = math.radians(args.angle)
+    vel = (args.speed * math.cos(ang), 0.0, args.speed * math.sin(ang))
+    r = sim.launch((args.x, 0.0, args.height), vel)
+    out = {"stuck": r.stuck, "score": r.score, "board_yz_m": r.board_yz, "short_m": r.shortfall_m}
+    print(json.dumps(out))
+    return 0 if r.stuck else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="darts")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -51,5 +65,11 @@ def main(argv: list[str] | None = None) -> int:
     throw.add_argument("--popsize", type=int, default=20)
     throw.add_argument("--out", default="runs/v1")
     throw.add_argument("--no-video", action="store_true")
+    drop = sub.add_parser("drop", help="launch a dart in free flight, no arm")
+    drop.add_argument("--speed", type=float, required=True, help="launch speed, m/s")
+    drop.add_argument("--angle", type=float, required=True, help="degrees above horizontal")
+    drop.add_argument("--x", type=float, default=0.3, help="launch distance from the base, m")
+    drop.add_argument("--height", type=float, default=1.6, help="launch height, m")
+    drop.add_argument("--twin", default="twin.yaml")
     args = parser.parse_args(argv)
-    return _scripted(args)
+    return _scripted(args) if args.cmd == "throw" else _drop(args)

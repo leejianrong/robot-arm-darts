@@ -2,7 +2,7 @@
 
 A MuJoCo digital twin of an SO-101 robot arm that learns to throw a 10 g dart at a regulation-height dartboard. Everything calibratable lives in `twin.yaml`, so the numbers can be tuned to a real arm once you have one.
 
-Status: early. The arm throws in simulation, but there is no learned policy yet. Under the real servo limits the board has to sit about 1.0 m away ([feasibility results](docs/v1-feasibility.md)).
+Status: early. The arm throws in simulation, and darts fly with drag, stick or bounce, and score on a regulation board, but there is no learned policy yet. Under the real servo limits the board has to sit about 1.0 m away ([feasibility results](docs/v1-feasibility.md)).
 
 ```mermaid
 flowchart LR
@@ -28,12 +28,19 @@ Search for the best scripted throw at the board distance in `twin.yaml` (about 4
 
 ```console
 $ uv run darts throw --scripted --no-video
-max release speed seen : 4.88 m/s
-best throw             : release 3.14 m/s at 48 deg, 1.62 m high; misses board centre by 0.09 m
+max release speed seen : 4.58 m/s
+best throw             : release 3.00 m/s at 46 deg, 1.64 m high; misses board centre by 0.05 m
 hits the board at 1.0 m? : YES
 ```
 
-It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. Video needs a GL backend (EGL or OSMesa), so render on a GPU pod.
+It exits 0 on a hit and 1 on a miss, and writes `runs/v1/report.json`. Launch a dart in free flight with no arm and see where it lands (exit 0 if it sticks):
+
+```console
+$ uv run darts drop --speed 5 --angle 25.7
+{"stuck": true, "score": 60, "board_yz_m": [0.0, 0.103], "short_m": 0.0}
+```
+
+Video needs a GL backend (EGL or OSMesa), so render on a GPU pod.
 
 ## Contributing
 

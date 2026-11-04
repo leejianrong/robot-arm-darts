@@ -35,6 +35,13 @@ class Dart:
 
 
 @dataclass(frozen=True)
+class Aero:
+    drag_kg_m: float  # force = drag * speed^2, i.e. 0.5 * air density * Cd * area
+    fin_torque_nm: float  # torque per (m/s)^2 per radian of misalignment
+    spin_damping_nm_s: float  # torque per rad/s of spin
+
+
+@dataclass(frozen=True)
 class Release:
     jaw_hold_rad: float
     jaw_open_rad: float
@@ -45,7 +52,9 @@ class Release:
 class Board:
     distance_m: float
     centre_height_m: float
-    radius_m: float
+    radius_m: float  # outer edge of the double ring; also the scoring radius
+    stick_min_speed_m_s: float  # slower than this at the tip and the dart bounces
+    stick_max_angle_rad: float  # angle between dart axis and board normal beyond which it bounces
 
 
 @dataclass(frozen=True)
@@ -59,6 +68,7 @@ class Twin:
     sim: Sim
     servo: Servo
     dart: Dart
+    aero: Aero
     release: Release
     board: Board
     mount: Mount
@@ -68,6 +78,7 @@ _SECTIONS: dict[str, type] = {
     "sim": Sim,
     "servo": Servo,
     "dart": Dart,
+    "aero": Aero,
     "release": Release,
     "board": Board,
     "mount": Mount,
