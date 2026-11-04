@@ -16,6 +16,7 @@ Trust the code over the docs where they disagree, then fix the docs. Built: V1 (
 
 - Calibratable physical numbers live only in `twin.yaml` (ADR-0006). Solver contact settings in `sim.py` (`CONTACT_*`) are tuned, not physical; changing them lets the dart slip or creep (ADR-0008).
 - A sweep or training result that looks too good (release speed over 6 m/s, hits from a downward release) is a solver or collision artifact until proven otherwise.
+- Aero coefficients and the stick thresholds are guesses until real data exists (ADR-0005).
 - Never print or commit the RunPod API key; it comes from the environment only.
 
 ## Workflow

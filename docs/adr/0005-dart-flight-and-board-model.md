@@ -11,7 +11,8 @@ You asked for realism with a 10 g dart at about 1.5 m (later 1.0 m after V1). Mu
 ## Decision
 
 - **Flight:** each step applies a quadratic drag force on the dart body and a restoring torque that aligns the dart axis to its velocity, standing in for the fins. Coefficients live in `twin.yaml`.
-- **Board:** a plane with disc and ring geometry for scoring. When the tip touches the face inside the board, and the speed and angle are within thresholds, a weld constraint freezes the dart. Otherwise it bounces. The score comes from the tip contact point.
+- **Board:** a thin collidable disc of the scoring radius, with regulation rings scored in pure Python (`board.py`). On first contact the dart sticks if its speed along the board normal and its angle to the normal are within the `twin.yaml` thresholds, else it counts as a bounce. Either way the throw ends at first contact, so a stuck dart needs no weld. The score comes from the contact point.
+- **Unmeasured:** the stick thresholds and the aero coefficients are guesses, and the 2 m/s stick speed in particular decides whether a 3 m/s throw can score at all.
 
 ## Alternatives considered
 

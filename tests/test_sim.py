@@ -86,7 +86,7 @@ def test_free_flight_matches_closed_form(twin):
     sim.reset(HOLD, settle_s=0.1)
     a, v = sim._dart_qadr, sim._dart_vadr
     p0 = np.array([0.5, 0.0, 1.6])
-    v0 = np.array([3.0, 0.0, 2.5])
+    v0 = np.array([1.0, 0.0, 2.5])  # stays clear of the board
     sim.data.qpos[a : a + 3] = p0
     sim.data.qvel[v : v + 6] = 0
     sim.data.qvel[v : v + 3] = v0
@@ -95,3 +95,38 @@ def test_free_flight_matches_closed_form(twin):
         mujoco.mj_step(model, sim.data)
     expected = p0 + v0 * t_end + np.array([0, 0, -0.5 * g * t_end**2])
     assert np.linalg.norm(sim.data.qpos[a : a + 3] - expected) < 1e-3
+
+
+def _launch(sim, speed, angle_deg, **kw):
+    a = np.radians(angle_deg)
+    return sim.launch((0.3, 0.0, 1.6), (speed * np.cos(a), 0.0, speed * np.sin(a)), **kw)
+
+
+def _no_aero(twin):
+    return dataclasses.replace(
+        twin, aero=dataclasses.replace(twin.aero, drag_kg_m=0.0, fin_torque_nm=0.0)
+    )
+
+
+def test_launch_at_treble_20_sticks_and_scores_60(twin):
+    r = _launch(ThrowSim(twin), 5.0, 25.7)
+    assert r.stuck and r.score == 60
+
+
+def test_launch_too_slow_falls_short_and_scores_zero(twin):
+    r = _launch(ThrowSim(twin), 0.8, 10.0)
+    assert not r.stuck and r.score == 0 and r.shortfall_m > 0
+
+
+def test_drag_shortens_the_flight(twin):
+    off = _launch(ThrowSim(_no_aero(twin)), 5.0, 25.7)
+    on = _launch(ThrowSim(twin), 5.0, 25.7)
+    assert on.board_yz[1] < off.board_yz[1] - 0.001  # lands lower by more than 1 mm
+
+
+def test_grazing_dart_bounces_and_square_dart_sticks(twin):
+    sim = ThrowSim(twin)
+    assert _launch(sim, 5.0, 17.6).stuck  # near-normal arrival
+    a = np.radians(20.0)  # from close in, so it reaches the board slowly
+    slow = sim.launch((0.9, 0.0, 1.6), (1.5 * np.cos(a), 0.0, 1.5 * np.sin(a)))
+    assert slow.hit_board and not slow.stuck  # arrives too slowly to stick

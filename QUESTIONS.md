@@ -18,7 +18,7 @@ None. Round 1 closed.
 | F6 | Camera mount | DECIDED | Fixed to base frame on a mast, never moves with the arm, never occluded | ADR-0007 |
 | Q1 | Primary user | ASSUMED | You, solo, sim now, real arm later; no hardware yet | PLAN §Users |
 | Q2 | Language / host | ASSUMED | Python 3.12 (3.13 dropped: wider wheel support for MuJoCo/SB3), WSL2 Linux, uv-managed | PLAN §Impl |
-| Q3 | Dart sticking model | ASSUMED | Tip contact within board face: weld if speed/angle ok, else bounce; score from tip point | PLAN §Shape |
+| Q3 | Dart sticking model | ASSUMED | Tip contact within board face: sticks if speed/angle ok, else bounce; score from tip point. Built in V2 as stop-at-first-contact, no weld (ADR-0005) | PLAN §Shape |
 | Q4 | Dart flight aero | ASSUMED | Custom per-step drag + fin restoring torque | PLAN §Shape |
 | Q5 | Config/state storage | ASSUMED | One `twin.yaml` of all calibratable params, versioned in git | ADR |
 | Q6 | Real-robot interface | ASSUMED | Same `Arm` protocol for sim and hardware; LeRobot as the real driver | ADR |

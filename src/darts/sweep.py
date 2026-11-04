@@ -28,6 +28,8 @@ def cost(r: ThrowResult) -> float:
     """Lower is better. Valid throws are ranked by miss distance, others by how far short."""
     if not r.released or r.slipped_early or r.diverged or r.collided:
         return 100.0
+    if r.hit_board and not r.stuck:  # reached the face but bounced: worse than any stuck dart
+        return 0.5 + r.miss_m
     if r.crossed_plane:
         return r.miss_m
     return 10.0 + r.shortfall_m
@@ -77,7 +79,7 @@ def sweep(
         best_crossed_plane=r.crossed_plane,
         board_distance_m=twin.board.distance_m,
         board_radius_m=twin.board.radius_m,
-        reaches_board=r.hit_board and not (r.slipped_early or r.diverged or r.collided),
+        reaches_board=r.stuck and not (r.slipped_early or r.diverged or r.collided),
         best_params=asdict(best),
     )
     return report, best
