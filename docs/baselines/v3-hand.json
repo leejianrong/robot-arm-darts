@@ -1,0 +1,14 @@
+{
+  "n": 100,
+  "seeds": [
+    0,
+    99
+  ],
+  "on_board_rate": 0.97,
+  "stuck_rate": 0.97,
+  "median_tip_error_m": 0.08268918609554382,
+  "p90_tip_error_m": 0.1965468295045059,
+  "mean_score": 12.49,
+  "meets_q13": false,
+  "policy": "hand"
+}

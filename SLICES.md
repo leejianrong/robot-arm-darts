@@ -87,6 +87,8 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Demo:** `darts eval --policy random --n 100` prints median and 90th percentile tip error and the hit rate, as JSON.
 
+**Built as:** `interface.py` (state, 8-number action with `shoulder_pan` for aiming sideways), `env.py`, `policies.py`, `evaluate.py`. Baselines on 100 seeds (`docs/baselines/`): random 0% on board; hand-tuned (best V2 throw, panned to the target, height ignored) 97% on board, median 8.3 cm, p90 19.7 cm. V4 has to beat that to reach 3 cm.
+
 **Rests on assumptions:** Q13.
 
 ### Test plan
