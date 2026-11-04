@@ -15,7 +15,7 @@ def raw():
 def test_repo_twin_loads():
     t = load_twin(ROOT / "twin.yaml")
     assert t.dart.mass_kg == pytest.approx(0.010)
-    assert t.board.distance_m == pytest.approx(1.0)
+    assert t.board.distance_m == pytest.approx(0.5)
     assert t.board.centre_height_m == pytest.approx(1.73)
 
 

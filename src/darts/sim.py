@@ -18,13 +18,17 @@ THROW_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex")
 # Dart pose in the gripper frame: pinched at the fingertips against the fixed jaw plate, barrel
 # along the finger direction (-z), tip protruding forward. Placement found by experiment.
 GRIP_X_OFFSET = -0.0098  # fixed jaw plate surface; dart centre is radius further along +x
-GRIP_Z_CENTRE = -0.113
+GRIP_Z_CENTRE = -0.095
+GRIP_ROLL_RAD = float(np.pi / 2)  # wrist roll that turns the pinch out of the swing plane
+# Dart attitude in the gripper frame: its axis (tip end) along gripper +y, across the fingers, so
+# with the roll above it lies in the swing plane and points along the hand's velocity.
+_DART_IN_GRIP = np.column_stack([(0, 0, 1), (1, 0, 0), (0, 1, 0)])
 HOLD_AFTER_HIT_S = 1.0  # extra simulated time recorded after the dart meets the board
 NO_POINT = (float("inf"), float("inf"))
 RELEASE_CONFIRM_STEPS = 5  # consecutive steps without pad contact that count as released
 CONTACT_IMPRATIO = 100.0
 CONTACT_SOLREF = (0.004, 1.0)
-JAW_CLAMP_START = -0.12  # jaw angle at reset, just short of contact
+JAW_CLAMP_START = -0.16  # jaw angle at reset, just short of contact
 _GRIPPER_BODIES = ("gripper", "moving_jaw_so101_v1", "camera_mount")  # the hand: both jaws
 
 
@@ -127,6 +131,8 @@ class ThrowResult:
     collided: bool = False  # the dart touched the arm or stand outside the jaw pads
     release_misalign_rad: float = 0.0  # angle between dart axis and velocity as it left the jaws
     release_spin_rad_s: float = 0.0  # dart angular speed as it left the jaws
+    arrival_angle_rad: float = float(np.pi)  # dart axis vs board normal at contact or crossing
+    arrival_speed_m_s: float = 0.0  # speed along the board normal at contact or crossing
     stuck: bool = False  # the tip hit the board fast and square enough to stick
     score: int = 0  # points for a stuck dart
 
@@ -161,7 +167,7 @@ class ThrowSim:
         rot = d.xmat[self._gripper_body].reshape(3, 3)
         local = np.array([GRIP_X_OFFSET + self.twin.dart.radius_m, 0.0, GRIP_Z_CENTRE])
         quat = np.empty(4)
-        mujoco.mju_mat2Quat(quat, rot.flatten())
+        mujoco.mju_mat2Quat(quat, (rot @ _DART_IN_GRIP).flatten())
         a = self._dart_qadr
         d.qpos[a : a + 3] = d.xpos[self._gripper_body] + rot @ local
         d.qpos[a + 3 : a + 7] = quat
@@ -176,6 +182,8 @@ class ThrowSim:
             d.ctrl[self._aid[n]] = v
         d.qpos[self._qadr("shoulder_pan")] = pan_rad
         d.ctrl[self._aid["shoulder_pan"]] = pan_rad
+        d.qpos[self._qadr("wrist_roll")] = GRIP_ROLL_RAD
+        d.ctrl[self._aid["wrist_roll"]] = GRIP_ROLL_RAD
         d.qpos[self._qadr("gripper")] = JAW_CLAMP_START
         d.ctrl[self._aid["gripper"]] = JAW_CLAMP_START
         self._place_dart_in_grip()
@@ -209,13 +217,17 @@ class ThrowSim:
         for i in range(d.ncon):
             c = d.contact[i]
             if {int(c.geom1), int(c.geom2)} == {self._dart_geom, self._board_geom}:
-                axis_x = d.xmat[self._dart_body].reshape(3, 3)[0, 2]  # tip direction vs normal
                 stick = (
                     pre_vel[0] >= b.stick_min_speed_m_s
-                    and np.arccos(np.clip(axis_x, -1, 1)) <= b.stick_max_angle_rad
+                    and self._arrival_angle() <= b.stick_max_angle_rad
                 )
                 return bool(stick), float(c.pos[1]), float(c.pos[2] - b.centre_height_m)
         return None
+
+    def _arrival_angle(self) -> float:
+        """Angle between the dart's tip direction and the board normal (+x)."""
+        axis_x = self.data.xmat[self._dart_body].reshape(3, 3)[0, 2]
+        return float(np.arccos(np.clip(axis_x, -1, 1)))
 
     def _attitude(self) -> tuple[np.ndarray, float]:
         """(unit vector from the dart's tail to its tip, angular speed in rad/s)."""
@@ -300,10 +312,11 @@ class ThrowSim:
         released, speed, angle, height = False, 0.0, 0.0, 0.0
         misalign, spin = 0.0, 0.0
         crossed, yz, hit, slipped, diverged = False, NO_POINT, False, False, False
-        collided, stuck, score = False, False, 0
+        collided, stuck, score, arrival, arrival_v = False, False, 0, float(np.pi), 0.0
         off_pad_steps, first_off = 0, None
         t, next_frame = 0.0, 0.0
         prev = self.dart_state()[0]
+        last_time = d.time
 
         def capture() -> None:
             nonlocal next_frame
@@ -320,9 +333,11 @@ class ThrowSim:
             t += dt
             capture()
             pos, vel = self.dart_state()
-            if not (np.isfinite(pos).all() and np.isfinite(d.qacc).all()):
+            # MuJoCo answers an unstable step by resetting the data (time returns to 0) and warning
+            if d.time < last_time or not (np.isfinite(pos).all() and np.isfinite(d.qacc).all()):
                 diverged = True
                 break
+            last_time = d.time
             on_pad, other, on_floor = self.dart_contacts()
             if other:
                 collided = True
@@ -346,7 +361,8 @@ class ThrowSim:
             if released:
                 if (c := self._board_contact(pre_vel)) is not None:
                     stuck, y, zb = c
-                    yz, crossed, hit = (y, zb), True, True
+                    yz, crossed, hit, arrival = (y, zb), True, True, self._arrival_angle()
+                    arrival_v = float(pre_vel[0])
                     score = score_tip(y, zb).points if stuck else 0
                     break
                 if prev[0] < board_x <= pos[0]:
@@ -354,11 +370,12 @@ class ThrowSim:
                     cross = prev + f * (pos - prev)
                     yz = (float(cross[1]), float(cross[2] - zc))
                     crossed, hit = True, np.hypot(*yz) <= tw.board.radius_m
+                    arrival, arrival_v = self._arrival_angle(), float(vel[0])
                     break
                 if on_floor or pos[2] <= 0.0:
                     break
             prev = pos
-        if hit:  # keep recording after contact: a stuck dart stays put, a bounce plays out
+        if hit and render is not None:  # keep recording: a stuck dart stays put, a bounce plays out
             a, v = self._dart_qadr, self._dart_vadr
             pose = d.qpos[a : a + 7].copy()
             for _ in range(round(HOLD_AFTER_HIT_S / dt)):
@@ -367,9 +384,12 @@ class ThrowSim:
                     d.qpos[a : a + 7], d.qvel[v : v + 6] = pose, 0.0
                 else:
                     self._apply_aero()
+                before = d.time
                 mujoco.mj_step(m, d)
                 t += dt
                 capture()
+                if d.time < before:  # an unstable bounce made MuJoCo reset; stop the recording
+                    break
         shortfall = 0.0 if crossed else max(0.0, board_x - float(self.dart_state()[0][0]))
         return ThrowResult(
             released=released,
@@ -378,6 +398,8 @@ class ThrowSim:
             release_height_m=height,
             release_misalign_rad=misalign,
             release_spin_rad_s=spin,
+            arrival_angle_rad=arrival,
+            arrival_speed_m_s=arrival_v,
             crossed_plane=crossed,
             board_yz=yz,
             shortfall_m=shortfall,

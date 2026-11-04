@@ -3,7 +3,7 @@
 from dataclasses import asdict, dataclass
 
 import numpy as np
-from scipy.optimize import differential_evolution
+from scipy.optimize import differential_evolution, minimize
 
 from darts.sim import THROW_JOINTS, ThrowParams, ThrowResult, ThrowSim, build_model
 from darts.twin import Twin
@@ -13,14 +13,15 @@ LIMITS = {  # joint ranges from the Menagerie model, slightly inside
     "elbow_flex": (-1.65, 1.65),
     "wrist_flex": (-1.6, 1.6),
 }
-T_RELEASE = (0.0, 0.6)
-# A real throw releases the dart nose-forward and nearly spinless. A tumbling dart can stick by
-# luck of its phase on arrival (V2 found such throws), so the search penalises it and a throw only
-# counts as a hit when the release is clean.
-MAX_MISALIGN_RAD = 0.35
-MAX_SPIN_RAD_S = 3.0
-MISALIGN_PENALTY_M_PER_RAD = 0.3
-SPIN_PENALTY_M_PER_RAD_S = 0.03
+T_RELEASE = (0.0, 0.45)  # the cross grip holds about this long in a swing
+# A fast hand always rotates, so the dart leaves spinning and tumbles in flight. What matters is
+# its attitude on arrival: stick needs the axis within the board's stick angle, and the search
+# keeps a margin inside it so the throw survives small errors in flight time and aero.
+MAX_ARRIVAL_RAD = 0.7
+ARRIVAL_PENALTY_M_PER_RAD = 0.3
+SPEED_MARGIN = 1.15  # aim this far above the stick speed
+SPEED_PENALTY_M_PER_M_S = 0.15
+BOUNCE_PENALTY_M = 0.2  # small enough that touching the face beats skimming past its rim
 
 
 def decode(x: np.ndarray) -> ThrowParams:
@@ -31,22 +32,22 @@ def decode(x: np.ndarray) -> ThrowParams:
     )
 
 
-def clean_release(r: ThrowResult) -> bool:
-    return r.release_misalign_rad <= MAX_MISALIGN_RAD and r.release_spin_rad_s <= MAX_SPIN_RAD_S
+def square_arrival(r: ThrowResult) -> bool:
+    return r.arrival_angle_rad <= MAX_ARRIVAL_RAD
 
 
-def cost(r: ThrowResult) -> float:
-    """Lower is better. Valid throws are ranked by miss distance plus a penalty for a tumbling
-    release; others by how far short."""
+def cost(r: ThrowResult, stick_speed: float = 2.0) -> float:
+    """Lower is better. Valid throws are ranked by miss distance plus penalties for arriving at a
+    slant, slower than the stick speed (with a margin) or bouncing; others by how far short."""
     if not r.released or r.slipped_early or r.diverged or r.collided:
         return 100.0
-    penalty = MISALIGN_PENALTY_M_PER_RAD * max(0.0, r.release_misalign_rad - MAX_MISALIGN_RAD)
-    penalty += SPIN_PENALTY_M_PER_RAD_S * max(0.0, r.release_spin_rad_s - MAX_SPIN_RAD_S)
-    if r.hit_board and not r.stuck:  # reached the face but bounced: worse than any stuck dart
-        return 0.5 + r.miss_m + penalty
-    if r.crossed_plane:
-        return r.miss_m + penalty
-    return 10.0 + r.shortfall_m + penalty
+    if not r.crossed_plane:
+        return 10.0 + r.shortfall_m
+    penalty = ARRIVAL_PENALTY_M_PER_RAD * max(0.0, r.arrival_angle_rad - MAX_ARRIVAL_RAD)
+    penalty += SPEED_PENALTY_M_PER_M_S * max(0.0, stick_speed * SPEED_MARGIN - r.arrival_speed_m_s)
+    if r.hit_board and not r.stuck:
+        penalty += BOUNCE_PENALTY_M
+    return r.miss_m + penalty
 
 
 @dataclass
@@ -59,6 +60,7 @@ class Report:
     best_release_height_m: float
     best_release_misalign_deg: float
     best_release_spin_rad_s: float
+    best_arrival_deg: float
     best_crossed_plane: bool
     board_distance_m: float
     board_radius_m: float
@@ -78,12 +80,16 @@ def sweep(
         r = sim.throw(decode(x))
         if r.released and not (r.slipped_early or r.diverged or r.collided):
             seen["max_speed"] = max(seen["max_speed"], r.release_speed_m_s)
-        return cost(r)
+        return cost(r, twin.board.stick_min_speed_m_s)
 
     res = differential_evolution(
         objective, bounds, rng=seed, maxiter=maxiter, popsize=popsize, tol=1e-6, polish=False
     )
-    best = decode(res.x)
+    # DE alone stalls short of the target on this chaotic cost; a local polish closes the gap.
+    polished = minimize(
+        objective, res.x, method="Nelder-Mead", bounds=bounds, options={"maxiter": 600}
+    )
+    best = decode(polished.x if polished.fun < res.fun else res.x)
     r = sim.throw(best)
     report = Report(
         evaluations=seen["n"],
@@ -94,11 +100,12 @@ def sweep(
         best_release_height_m=r.release_height_m,
         best_release_misalign_deg=float(np.degrees(r.release_misalign_rad)),
         best_release_spin_rad_s=r.release_spin_rad_s,
+        best_arrival_deg=float(np.degrees(r.arrival_angle_rad)),
         best_crossed_plane=r.crossed_plane,
         board_distance_m=twin.board.distance_m,
         board_radius_m=twin.board.radius_m,
         reaches_board=r.stuck
-        and clean_release(r)
+        and square_arrival(r)
         and not (r.slipped_early or r.diverged or r.collided),
         best_params=asdict(best),
     )

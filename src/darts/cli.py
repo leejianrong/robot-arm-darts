@@ -32,7 +32,8 @@ def _scripted(args: argparse.Namespace) -> int:
     )
     print(
         f"release attitude       : {report.best_release_misalign_deg:.0f} deg off its direction "
-        f"of travel, spinning {report.best_release_spin_rad_s:.1f} rad/s"
+        f"of travel, spinning {report.best_release_spin_rad_s:.1f} rad/s; arrives "
+        f"{report.best_arrival_deg:.0f} deg off the board normal"
     )
     print(f"hits the board at {report.board_distance_m:.1f} m? : {verdict}")
     if not args.no_video:
