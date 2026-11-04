@@ -47,3 +47,17 @@ def test_invalid_throws_rank_last():
 
 def test_a_bounce_costs_more_than_a_dart_that_sticks():
     assert cost(result(stuck=False, miss_m=0.01)) > cost(result(stuck=True, miss_m=0.15))
+
+
+def test_a_tumbling_release_costs_more_than_a_clean_one():
+    clean = result(release_misalign_rad=0.1, release_spin_rad_s=1.0)
+    tumbling = result(release_misalign_rad=1.6, release_spin_rad_s=14.0)
+    assert cost(tumbling) > cost(clean) + 0.3
+
+
+def test_clean_release_limits():
+    from darts.sweep import clean_release
+
+    assert clean_release(result(release_misalign_rad=0.2, release_spin_rad_s=2.0))
+    assert not clean_release(result(release_misalign_rad=1.6, release_spin_rad_s=2.0))
+    assert not clean_release(result(release_misalign_rad=0.2, release_spin_rad_s=14.0))

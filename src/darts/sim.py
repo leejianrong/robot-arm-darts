@@ -125,6 +125,8 @@ class ThrowResult:
     slipped_early: bool = False  # dart left the jaws before the release command
     diverged: bool = False  # the solver blew up (non-finite state); the throw is invalid
     collided: bool = False  # the dart touched the arm or stand outside the jaw pads
+    release_misalign_rad: float = 0.0  # angle between dart axis and velocity as it left the jaws
+    release_spin_rad_s: float = 0.0  # dart angular speed as it left the jaws
     stuck: bool = False  # the tip hit the board fast and square enough to stick
     score: int = 0  # points for a stuck dart
 
@@ -215,6 +217,12 @@ class ThrowSim:
                 return bool(stick), float(c.pos[1]), float(c.pos[2] - b.centre_height_m)
         return None
 
+    def _attitude(self) -> tuple[np.ndarray, float]:
+        """(unit vector from the dart's tail to its tip, angular speed in rad/s)."""
+        rot = self.data.xmat[self._dart_body].reshape(3, 3)
+        a = self._dart_vadr
+        return rot[:, 2].copy(), float(np.linalg.norm(self.data.qvel[a + 3 : a + 6]))
+
     def _apply_aero(self) -> None:
         d, a = self.data, self._dart_vadr
         rot = d.xmat[self._dart_body].reshape(3, 3)
@@ -290,6 +298,7 @@ class ThrowSim:
         dt = m.opt.timestep
         board_x, zc = tw.board.distance_m, tw.board.centre_height_m
         released, speed, angle, height = False, 0.0, 0.0, 0.0
+        misalign, spin = 0.0, 0.0
         crossed, yz, hit, slipped, diverged = False, NO_POINT, False, False, False
         collided, stuck, score = False, False, 0
         off_pad_steps, first_off = 0, None
@@ -323,10 +332,13 @@ class ThrowSim:
                     off_pad_steps, first_off = 0, None
                 else:
                     off_pad_steps += 1
-                    first_off = first_off or (t, pos, vel)
+                    first_off = first_off or (t, pos, vel, *self._attitude())
                 if off_pad_steps >= RELEASE_CONFIRM_STEPS and first_off is not None:
                     released = True
-                    t_off, p_off, v_off = first_off
+                    t_off, p_off, v_off, axis_off, spin = first_off
+                    misalign = float(
+                        np.arccos(np.clip(axis_off @ v_off / np.linalg.norm(v_off), -1, 1))
+                    )
                     slipped = t_off < p.t_release_s
                     speed = float(np.linalg.norm(v_off))
                     angle = float(np.arctan2(v_off[2], np.hypot(v_off[0], v_off[1])))
@@ -364,6 +376,8 @@ class ThrowSim:
             release_speed_m_s=speed,
             release_angle_rad=angle,
             release_height_m=height,
+            release_misalign_rad=misalign,
+            release_spin_rad_s=spin,
             crossed_plane=crossed,
             board_yz=yz,
             shortfall_m=shortfall,

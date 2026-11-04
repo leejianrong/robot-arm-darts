@@ -120,6 +120,7 @@ Pods must be torn down on every path. The runner uses the runpod-jobs dead-man's
 
 ## Open risks
 
+- **Clean release (found after V2).** The V1/V2 best throws released the dart 95° off its direction of travel, spinning at 14 rad/s: a tumbling dart that sticks by luck. With a clean-release requirement the search finds nothing that reaches 1.0 m (best 18 cm off at 2.6 m/s). Open: re-orient the grasp so the whip carries the dart nose-first, or shorten the range.
 - **Throw speed (measured in V1).** The servo velocity limit (4.5 rad/s) caps forward release speed near 3.2 m/s, which puts the board at 1.0 m with little headroom: best miss 3 cm at 0.9 m, 9 cm at 1.0 m, 16 cm at 1.1 m, 25 cm (a miss) at 1.2 m. Details in `docs/v1-feasibility.md`. A faster real servo supply voltage (12 V STS3215, about 7 rad/s) would extend this and is worth checking on hardware.
 - **Release timing.** Gripper opening latency of tens of milliseconds moves the landing point by several centimetres. Latency is a twin parameter and is randomised in V5.
 - **Actuator model fidelity.** The Menagerie model's servo behaviour may be too ideal. V9's fit against synthetic data shows the method works, but the real calibration waits for hardware.
