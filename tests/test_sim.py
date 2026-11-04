@@ -148,3 +148,9 @@ def test_a_stuck_dart_stays_put_while_the_replay_keeps_recording(twin):
     assert r.stuck
     hold = tips[-30:]  # the last half second of recording is all hold
     assert max(np.linalg.norm(t - hold[0]) for t in hold) < 1e-9
+
+
+def test_spin_damping_is_stable_at_the_timestep(twin):
+    """Explicit damping blows up when c*dt/I nears 2 (it did at 1.64 on the dart's thin axis)."""
+    inertia = build_model(twin).body_inertia[build_model(twin).body("dart").id]
+    assert twin.aero.spin_damping_nm_s * twin.sim.timestep_s / inertia.min() < 0.5

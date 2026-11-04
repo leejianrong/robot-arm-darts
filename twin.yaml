@@ -15,7 +15,7 @@ dart:
 aero:                        # guesses for a 10 g dart with flights; fit to real flights (V9 sysid)
   drag_kg_m: 7.2e-5          # 0.5 * 1.2 kg/m^3 * Cd 1.0 * 1.2 cm^2
   fin_torque_nm: 1.5e-5      # N m per (m/s)^2 per radian of misalignment
-  spin_damping_nm_s: 5.0e-5
+  spin_damping_nm_s: 5.0e-6  # kept small: explicit damping is unstable if this * dt / axial inertia > 2
 release:
   jaw_hold_rad: -0.17        # jaw command while holding (squeezes against the dart, torque-limited)
   jaw_open_rad: 1.0          # jaw command at release
