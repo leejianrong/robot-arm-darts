@@ -121,6 +121,8 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Demo:** One command trains on a pod and tears it down. A replay mp4 of 10 throws at random targets lands on the board.
 
+**Built so far:** `darts train` (PPO as a residual on the hand-tuned throw, since random throws never reach the board), `scripts/pod_train.sh` + `scripts/pod_job.sh` + vendored `scripts/rp` (dead-man's-switch, teardown, relay pull). Not yet run on a real pod: waiting on a RunPod key and a spend cap.
+
 **Rests on assumptions:** Q13 (≥90% on board, median error ≤3 cm).
 
 ### Test plan
