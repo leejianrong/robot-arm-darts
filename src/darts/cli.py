@@ -54,6 +54,21 @@ def _drop(args: argparse.Namespace) -> int:
     return 0 if r.stuck else 1
 
 
+def _eval(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.env import DartThrowEnv
+    from darts.evaluate import evaluate
+    from darts.policies import POLICIES
+
+    env = DartThrowEnv(load_twin(args.twin))
+    seeds = list(range(args.seed, args.seed + args.n))
+    result = evaluate(env, POLICIES[args.policy], seeds) | {"policy": args.policy}
+    print(json.dumps(result, indent=2))
+    return 0 if result["meets_q13"] else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="darts")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -71,5 +86,10 @@ def main(argv: list[str] | None = None) -> int:
     drop.add_argument("--x", type=float, default=0.3, help="launch distance from the base, m")
     drop.add_argument("--height", type=float, default=1.6, help="launch height, m")
     drop.add_argument("--twin", default="twin.yaml")
+    ev = sub.add_parser("eval", help="evaluate a policy on seeded throws, JSON out")
+    ev.add_argument("--policy", choices=["random", "hand"], required=True)
+    ev.add_argument("--n", type=int, default=100)
+    ev.add_argument("--seed", type=int, default=0, help="first seed; the list is seed..seed+n-1")
+    ev.add_argument("--twin", default="twin.yaml")
     args = parser.parse_args(argv)
-    return _scripted(args) if args.cmd == "throw" else _drop(args)
+    return {"throw": _scripted, "drop": _drop, "eval": _eval}[args.cmd](args)

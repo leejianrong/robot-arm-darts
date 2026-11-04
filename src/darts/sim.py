@@ -96,6 +96,7 @@ class ThrowParams:
     q_start: tuple[float, float, float]  # shoulder_lift, elbow_flex, wrist_flex
     q_end: tuple[float, float, float]
     t_release_s: float  # time after motion start that the jaw is commanded open
+    pan_rad: float = 0.0  # shoulder_pan, held for the whole throw; aims the throw sideways
 
 
 @dataclass(frozen=True)
@@ -150,12 +151,16 @@ class ThrowSim:
         d.qpos[a : a + 3] = d.xpos[self._gripper_body] + rot @ local
         d.qpos[a + 3 : a + 7] = quat
 
-    def reset(self, q_start: tuple[float, float, float], settle_s: float = 0.4) -> None:
+    def reset(
+        self, q_start: tuple[float, float, float], pan_rad: float = 0.0, settle_s: float = 0.4
+    ) -> None:
         mujoco.mj_resetData(self.model, self.data)
         d = self.data
         for n, v in zip(THROW_JOINTS, q_start, strict=True):
             d.qpos[self._qadr(n)] = v
             d.ctrl[self._aid[n]] = v
+        d.qpos[self._qadr("shoulder_pan")] = pan_rad
+        d.ctrl[self._aid["shoulder_pan"]] = pan_rad
         d.qpos[self._qadr("gripper")] = JAW_CLAMP_START
         d.ctrl[self._aid["gripper"]] = JAW_CLAMP_START
         self._place_dart_in_grip()
@@ -261,7 +266,7 @@ class ThrowSim:
         fps: int = 30,
     ) -> ThrowResult:
         """Run one scripted throw. `render` is a callable returning an RGB frame, if given."""
-        self.reset(p.q_start)
+        self.reset(p.q_start, p.pan_rad)
         m, d, tw = self.model, self.data, self.twin
         dt = m.opt.timestep
         board_x, zc = tw.board.distance_m, tw.board.centre_height_m

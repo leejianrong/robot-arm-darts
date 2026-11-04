@@ -21,4 +21,4 @@ Trust the code over the docs where they disagree, then fix the docs. Built: V1 (
 
 ## Workflow
 
-Branch per slice off `main`, PR-only, merge when CI is green. Update README, CLAUDE.md and docs in the same PR as the change they describe.
+Branch per slice off `main`, PR-only, merge when CI is green. Pushes and PRs do not trigger Actions on this repo (cause unknown); start CI with `gh workflow run ci.yml --ref <branch>`. Update README, CLAUDE.md and docs in the same PR as the change they describe.

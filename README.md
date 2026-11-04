@@ -40,6 +40,15 @@ $ uv run darts drop --speed 5 --angle 25.7
 {"stuck": true, "score": 60, "board_yz_m": [0.0, 0.103], "short_m": 0.0}
 ```
 
+Score a baseline policy on 100 seeded throws at random board targets (JSON out, exit 0 only if at least 90% reach the board with a median tip error of 3 cm or less):
+
+```console
+$ uv run darts eval --policy hand --n 100
+{"on_board_rate": 0.97, "median_tip_error_m": 0.083, "p90_tip_error_m": 0.197, "meets_q13": false, ...}
+```
+
+`--policy random` reaches the board 0% of the time. Both baselines are saved in `docs/baselines/`.
+
 Video needs a GL backend (EGL or OSMesa), so render on a GPU pod.
 
 ## Contributing
