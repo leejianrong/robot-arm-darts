@@ -74,7 +74,7 @@ def train(twin: Twin, steps: int, n_envs: int, seed: int, scale: float, out: Pat
     model = PPO(
         "MlpPolicy", venv, n_steps=64, batch_size=256, n_epochs=10, learning_rate=3e-4,
         policy_kwargs={"log_std_init": -1.0, "net_arch": [64, 64]}, seed=seed, device="cpu",
-        verbose=0,
+        verbose=1,
     )  # fmt: skip
     start = time.time()
     model.learn(total_timesteps=steps)

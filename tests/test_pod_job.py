@@ -28,15 +28,18 @@ def test_a_failing_job_still_publishes_its_artifact(tmp_path):
         "RUN_ID": "t",
         "STEPS": "1",
         "SEED": "0",
+        "NENVS": "1",
+        "HEARTBEAT_SECS": "1",
     }
     r = subprocess.run(
         ["bash", str(ROOT / "scripts/pod_job.sh")], env=env, capture_output=True, text=True,
         timeout=120,
     )  # fmt: skip
     assert r.returncode == 1
-    assert "STAGE failed" in r.stdout and "was: install" in r.stdout
+    assert "STAGE failed" in r.stdout and "was: clone" in r.stdout
     assert re.search(r"RP_ARTIFACT_CODE=darts-\d+-7-7", r.stdout)
     assert (inbox / "run.tar").exists()
+    assert "HEARTBEAT stage=" in r.stdout and "ram=" in r.stdout
 
 
 def test_pod_train_refuses_to_start_without_a_key_or_a_price_cap(tmp_path):
