@@ -1,5 +1,7 @@
 """The pod-side job script must publish its run directory even when the job fails."""
 
+import contextlib
+import json
 import os
 import re
 import subprocess
@@ -56,3 +58,25 @@ def test_pod_train_refuses_to_start_without_a_key_or_a_price_cap(tmp_path):
     )
     assert no_cap.returncode != 0
     assert "RP_MAX_HOURLY_USD" in no_cap.stderr or "not pushed" in no_cap.stderr
+
+
+def test_spend_guard_deletes_only_my_pod_once_over_the_cap(tmp_path):
+    run = {"uptimeSeconds": 3600, "desiredStatus": "RUNNING"}
+    pods = [
+        {"id": "mine", "name": "darts-t", "costPerHr": 3.6, **run},
+        {"id": "theirs", "name": "other-job", "costPerHr": 9.0, **run},
+    ]
+    (tmp_path / "pods.json").write_text(json.dumps(pods))
+    shim = tmp_path / "runpodctl"
+    shim.write_text(
+        f'#!/bin/sh\ncase "$1 $2" in\n'
+        f'"user ") echo \'{{"clientBalance": 50, "currentSpendPerHr": 12.6}}\';;\n'
+        f'"pod list") cat {tmp_path}/pods.json;;\n'
+        f'"pod delete") echo "$3" >> {tmp_path}/deleted;;\nesac\n'
+    )
+    shim.chmod(0o755)
+    env = os.environ | {"PATH": f"{tmp_path}:{os.environ['PATH']}"}
+    guard = [str(ROOT / "scripts/rp_guard.py"), "--cap-usd", "2", "--interval", "1"]
+    with contextlib.suppress(subprocess.TimeoutExpired):  # the guard loops until stopped
+        subprocess.run(guard, env=env, capture_output=True, text=True, timeout=4)
+    assert set((tmp_path / "deleted").read_text().split()) == {"mine"}

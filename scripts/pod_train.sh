@@ -17,8 +17,8 @@ git branch -r --contains "$REF" | grep -q . || { echo "commit $REF is not pushed
 
 export RP_POD_NAME="darts-$RUN_ID"
 export RP_POD_IMAGE="${RP_POD_IMAGE:-python:3.12}"
-export RP_COMPUTE_TYPE=CPU RP_VCPU_COUNT="${RP_VCPU_COUNT:-16}"
-export NENVS="$RP_VCPU_COUNT"  # nproc on a pod shows the host, not the allocation
+export RP_COMPUTE_TYPE="${RP_COMPUTE_TYPE:-CPU}" RP_VCPU_COUNT="${RP_VCPU_COUNT:-16}"
+export NENVS="${NENVS:-$RP_VCPU_COUNT}"  # nproc on a pod shows the host; a GPU pod needs NENVS set
 export RP_MAX_HOURLY_USD="${RP_MAX_HOURLY_USD:?set RP_MAX_HOURLY_USD (the most you will pay per hour)}"
 export RP_MAX_LIFETIME_SECS="${RP_MAX_LIFETIME_SECS:-7200}"
 export RP_STATE_FILE="runs/.rp-state-$RUN_ID"
@@ -27,6 +27,7 @@ export RP_JOB_CMD="export REF=$REF RUN_ID=$RUN_ID STEPS=$STEPS SEED=$SEED EVAL_E
 
 WATCH="runs/$RUN_ID.watch.log"  # raw snapshots of the pod log, kept even if the pod vanishes
 mkdir -p runs
+WATCHER=
 trap 'kill $WATCHER 2>/dev/null; ./scripts/rp down' EXIT INT TERM
 ./scripts/rp up
 
