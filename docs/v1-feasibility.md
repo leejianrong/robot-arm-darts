@@ -40,3 +40,11 @@ The dart is now held across the fingers with the wrist rolled 90° (`GRIP_ROLL_R
 - **The 0.5 m throw is fairly robust.** It sticks in 83% of 54 variants (aero guesses x release time within 10 ms), median miss 15 cm. It sits at the lower rim because a higher release angle makes the dart arrive too slanted.
 - **The grip is marginal.** The jaws pinch at their tip edges, the dart creeps out after about 0.45 s of swinging, and the search is limited to releases before that.
 - **The solver warnings were the post-contact replay.** MuJoCo prints "unstable" while the bounce after a hit plays out (a thin 10 g capsule), and resets itself. That only ran for replays after the result was recorded, so it never touched a score. It now runs only when rendering. Throws that go unstable before the result are flagged `diverged`, including when MuJoCo resets silently.
+
+## Update (stand raised to 1.4 m, shoulder height of an average adult)
+
+The V1 tables above were measured on a 1.2 m stand. `twin.yaml` now mounts the arm at 1.4 m. The board stays at 1.73 m, so the climb from the base is 0.33 m instead of 0.53 m and the dart arrives flatter.
+
+- The unchanged hand throw sticks on 30 of 30 held-out seeds, median miss 7.6 cm, p90 16 cm. On the 1.2 m stand it was 84% on board with an 18 cm median.
+- The nominal throw lands 5 cm from the centre, and sticks at release-time offsets of up to 10 ms either way (arrival 0.56 to 0.80 rad).
+- Not redone on the new stand: the reach search per board distance, `darts robust` across the aero guesses, and the per-target base-throw map. The 0.5 m board distance was chosen for the old height and may now allow a longer range.

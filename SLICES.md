@@ -10,7 +10,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 **Build plan**
 
-1. Load the Menagerie SO-101 on a waist-height stand (twin `mount.height_m`) with a regulation-height board face, and a 10 g dart held by jaw friction (ADR-0008).
+1. Load the Menagerie SO-101 on a shoulder-height stand (1.4 m) (twin `mount.height_m`) with a regulation-height board face, and a 10 g dart held by jaw friction (ADR-0008).
 2. Create `twin.yaml` with servo gains, torque and velocity limits, dart size, pad friction, board and mount geometry.
 3. Script a planar flick (shoulder, elbow, wrist) with a timed jaw opening, and let the dart fly ballistically (no aero).
 4. Search release time and joint targets for the throw that gets closest to the board centre, and report the result at several board distances.
