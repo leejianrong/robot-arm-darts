@@ -38,7 +38,7 @@ def solved_from(truth: np.ndarray, n: int = 40) -> list[dict]:
 def test_fit_recovers_a_smooth_target_to_throw_map_and_the_policy_uses_it():
     twin = load_twin()
     mid = (LOW + HIGH) / 2
-    truth = np.zeros((8, 6))
+    truth = np.zeros((8, len(features(0.0, 0.0))))
     truth[:, 0] = mid
     truth[7, 1] = -0.5  # pan follows lateral offset
     truth[1, 2] = 0.8  # one joint follows height

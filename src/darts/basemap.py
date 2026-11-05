@@ -2,7 +2,7 @@
 
 The hand policy fires one throw at every target, so it lands low and ignores height. Here a
 search finds a throw that sticks near each of N targets (in parallel, warm-started from the best
-centre throw and then from solved neighbours), and a quadratic regression turns the solutions
+centre throw and then from solved neighbours), and a cubic regression turns the solutions
 into a policy: target -> the eight throw numbers. PPO can then learn a small correction on top.
 """
 
@@ -88,12 +88,15 @@ def solve_target(job: tuple) -> dict:
     }  # fmt: skip
 
 
-def features(y: float, h: float) -> np.ndarray:
-    return np.array([1.0, y, h, y * y, y * h, h * h])
+DEGREE = 3  # quadratic left the top rim (z > +11 cm) unreachable: 89% stuck vs 99% for cubic
+
+
+def features(y: float, h: float, degree: int = DEGREE) -> np.ndarray:
+    return np.array([y**i * h**j for i in range(degree + 1) for j in range(degree + 1 - i)])
 
 
 def fit(solved: list[dict], centre_h: float = 0.0) -> dict | None:
-    """Least-squares quadratic map from target (y, z) to the eight throw numbers, or None."""
+    """Least-squares polynomial map from target (y, z) to the eight throw numbers, or None."""
     ok = [s for s in solved if s["stuck"] and s["miss_m"] <= ACCEPT_M]
     if len(ok) < 12:
         return None
@@ -109,10 +112,11 @@ def fit(solved: list[dict], centre_h: float = 0.0) -> dict | None:
 
 def basemap_policy(fitted: dict) -> Policy:
     coef = np.array(fitted["coef"])
+    degree = next(d for d in range(1, 8) if len(features(0.0, 0.0, d)) == coef.shape[1])
 
     def policy(state: State, rng: np.random.Generator) -> np.ndarray:
         y, h = float(state.target_in_base[1]), float(state.target_in_base[2]) - fitted["centre_h"]
-        x = np.clip(coef @ features(y, h), LOW, HIGH)
+        x = np.clip(coef @ features(y, h, degree), LOW, HIGH)
         p = ThrowParams(tuple(x[:3]), tuple(x[3:6]), float(x[6]), float(x[7]))  # type: ignore[arg-type]
         return encode_action(p)
 
