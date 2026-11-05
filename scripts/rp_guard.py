@@ -47,7 +47,7 @@ def main() -> int:
             continue
         for p in pods:
             spent[p["id"]] = max(
-                spent.get(p["id"], 0.0), p["costPerHr"] * p["uptimeSeconds"] / 3600
+                spent.get(p["id"], 0.0), p["costPerHr"] * p.get("uptimeSeconds", 0) / 3600
             )
         total = sum(spent.values())
         mine = sum(p["costPerHr"] for p in pods if p["desiredStatus"] == "RUNNING")
@@ -65,7 +65,7 @@ def main() -> int:
         elif me["clientBalance"] < a.min_balance:
             why = f"balance ${me['clientBalance']:.2f} under ${a.min_balance:.2f}"
         for p in pods:
-            over = p["uptimeSeconds"] > a.max_hours * 3600
+            over = p.get("uptimeSeconds", 0) > a.max_hours * 3600
             if why or over:
                 reason = why or f"alive over {a.max_hours} h"
                 print(f"GUARD KILL {p['id']} {p['name']}: {reason}", flush=True)

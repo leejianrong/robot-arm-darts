@@ -13,14 +13,14 @@ from darts.twin import Twin
 log = logging.getLogger(__name__)
 INVALID_REWARD = -2.0  # the arm failed to make a throw at all (slip, collision, solver blow-up)
 SHORT_REWARD = -1.0  # the dart never reached the board; shortfall is subtracted on top
-STICK_BONUS = 0.05
+BOUNCE_PENALTY = 0.2  # a dart that hits but does not stick is not a hit (PPO farmed bounces)
 
 
 class DartThrowEnv(gym.Env):
     """Observation is the state interface, action is the throw (see `interface.py`).
 
     Reward is the negative distance from where the dart met the board to the target, plus a
-    small bonus for a stuck dart. Terminates after the single step.
+    penalty if it does not stick, and no tip error is reported. Terminates after the single step.
     """
 
     metadata = {"render_modes": []}
@@ -53,7 +53,7 @@ class DartThrowEnv(gym.Env):
             return SHORT_REWARD - r.shortfall_m if not r.crossed_plane else -r.miss_m, None
         y, z = r.board_yz
         dist = float(np.hypot(y - self._target[1], z - self._target[0]))
-        return -dist + (STICK_BONUS if r.stuck else 0.0), dist
+        return (-dist, dist) if r.stuck else (-dist - BOUNCE_PENALTY, None)
 
     def step(self, action: np.ndarray):
         params, clipped = decode_action(np.asarray(action, dtype=np.float64))

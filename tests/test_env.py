@@ -51,6 +51,20 @@ def test_closer_tip_earns_more_reward():
     assert r_near > r_far
 
 
+def test_a_bounce_on_target_is_not_a_hit():
+    """PPO learned to bounce darts off the board (100% 'on board', 0% stuck) when it paid."""
+    env = env_with(result())
+    _, info = env.reset(seed=3)
+    y, z = info["target_yz_m"]
+    env.sim.result = result(board_yz=(y, z), stuck=True)
+    _, stuck_reward, _, _, stuck_info = env.step(np.zeros(ACTION_DIM))
+    env.sim.result = result(board_yz=(y, z), stuck=False)
+    _, bounce_reward, _, _, bounce_info = env.step(np.zeros(ACTION_DIM))
+    assert stuck_info["tip_error_m"] == pytest.approx(0.0, abs=1e-9)
+    assert bounce_info["tip_error_m"] is None
+    assert bounce_reward < stuck_reward - 0.1
+
+
 def test_step_flags_a_clipped_action():
     env = env_with(result())
     env.reset(seed=0)
