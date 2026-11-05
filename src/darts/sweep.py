@@ -44,14 +44,15 @@ def throw_penalty(r: ThrowResult, stick_speed: float = 2.0) -> float:
     return penalty + (BOUNCE_PENALTY_M if r.hit_board and not r.stuck else 0.0)
 
 
-def cost(r: ThrowResult, stick_speed: float = 2.0) -> float:
-    """Lower is better. Valid throws are ranked by miss distance plus `throw_penalty`; others by
-    how far short."""
+def cost(r: ThrowResult, stick_speed: float = 2.0, target_yz: tuple[float, float] = (0.0, 0.0)):
+    """Lower is better. Valid throws are ranked by distance from `target_yz` (board-plane lateral
+    and height offsets from the centre) plus `throw_penalty`; others by how far short."""
     if not r.released or r.slipped_early or r.diverged or r.collided:
         return 100.0
     if not r.crossed_plane:
         return 10.0 + r.shortfall_m
-    return r.miss_m + throw_penalty(r, stick_speed)
+    miss = float(np.hypot(r.board_yz[0] - target_yz[0], r.board_yz[1] - target_yz[1]))
+    return miss + throw_penalty(r, stick_speed)
 
 
 @dataclass

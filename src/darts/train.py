@@ -5,7 +5,6 @@ A random policy never reaches the board, so PPO from scratch sees no signal. The
 a correction `scale * a` added to the hand-tuned action instead.
 """
 
-import dataclasses
 import json
 import time
 from pathlib import Path
@@ -17,6 +16,7 @@ from darts.env import DartThrowEnv
 from darts.evaluate import evaluate
 from darts.interface import State
 from darts.policies import Policy, hand_tuned_policy
+from darts.robust import aero_variant
 from darts.twin import Twin
 
 HELD_OUT_SEEDS = list(range(10_000, 10_100))  # never used for training resets
@@ -139,19 +139,6 @@ def _callback(twin: Twin, scale: float, out: Path, eval_every: int, max_seconds:
     return Progress()
 
 
-def _aero_variant(twin: Twin, fin: float, damp: float, drag: float) -> Twin:
-    a = twin.aero
-    return dataclasses.replace(
-        twin,
-        aero=dataclasses.replace(
-            a,
-            fin_torque_nm=a.fin_torque_nm * fin,
-            spin_damping_nm_s=a.spin_damping_nm_s * damp,
-            drag_kg_m=a.drag_kg_m * drag,
-        ),
-    )
-
-
 def train(
     twin: Twin, steps: int, n_envs: int, seed: int, scale: float, out: Path,
     eval_every: int = 10_000, max_seconds: float | None = None, n_steps: int = 64,
@@ -186,7 +173,7 @@ def train(
     env = DartThrowEnv(twin)
     learned = learned_policy(model, scale)
     robust = {  # a policy that only works at the nominal aero numbers is not a result
-        str(c): evaluate(DartThrowEnv(_aero_variant(twin, *c)), learned, PROGRESS_SEEDS)
+        str(c): evaluate(DartThrowEnv(aero_variant(twin, *c)), learned, PROGRESS_SEEDS)
         for c in AERO_CORNERS
     }
     metrics = {
