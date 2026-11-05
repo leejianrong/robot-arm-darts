@@ -48,3 +48,5 @@ The V1 tables above were measured on a 1.2 m stand. `twin.yaml` now mounts the a
 - The unchanged hand throw sticks on 30 of 30 held-out seeds, median miss 7.6 cm, p90 16 cm. On the 1.2 m stand it was 84% on board with an 18 cm median.
 - The nominal throw lands 5 cm from the centre, and sticks at release-time offsets of up to 10 ms either way (arrival 0.56 to 0.80 rad).
 - Not redone on the new stand: the reach search per board distance, `darts robust` across the aero guesses, and the per-target base-throw map. The 0.5 m board distance was chosen for the old height and may now allow a longer range.
+
+Base-throw map on the 1.4 m stand (CPU pod, 80 targets, 2 rounds): 73 of 80 targets reach within 6 cm, against 11 of 80 on the 1.2 m stand. A quadratic map left the top rim (z above +11 cm) unreachable (89% stuck); a cubic map sticks 94 to 99% across three sets of 100 seeds with a 2.4 to 2.8 cm median and a 6.7 cm p90 on the best set (`docs/baselines/basemap.json`; degree 4 overfits at 87%). The degree was chosen on seeds 10000 to 10099, then checked on 20000 and 30000.
