@@ -182,3 +182,21 @@ def test_the_hand_throw_sticks_in_most_aero_and_timing_variants(twin):
     from darts.robust import robustness
 
     assert robustness(twin, _BEST)["stuck_rate"] >= 0.8
+
+
+def test_training_logs_progress_and_stops_on_its_time_budget(twin, tmp_path, monkeypatch):
+    """A pod run shows learning as it goes and still saves its policy when a rule stops it."""
+    import json
+
+    pytest.importorskip("stable_baselines3")
+    import darts.train as t
+
+    monkeypatch.setattr(t, "PROGRESS_SEEDS", [10_000, 10_001])
+    monkeypatch.setattr(t, "HELD_OUT_SEEDS", [10_000, 10_001])
+    monkeypatch.setattr(t, "REGRESSION", 2.0)  # two seeds are too noisy for the regression rule
+    m = t.train(twin, 4096, 1, 0, 0.25, tmp_path, eval_every=1, max_seconds=0.0)
+    rows = [json.loads(line) for line in (tmp_path / "metrics.jsonl").read_text().splitlines()]
+    assert rows and {"steps", "on_board", "diverged_rate", "hand_on_board"} <= rows[0].keys()
+    assert (tmp_path / "checkpoint.zip").exists() and (tmp_path / "policy.zip").exists()
+    assert m["aborted"] == "time budget 0s used" and (tmp_path / "abort.txt").exists()
+    assert len(m["aero_corners"]) == 2
