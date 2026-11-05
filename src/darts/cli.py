@@ -60,6 +60,12 @@ def _drop(args: argparse.Namespace) -> int:
     return 0 if r.stuck else 1
 
 
+def _policy(name: str):
+    from darts.policies import POLICIES
+
+    return POLICIES[name] if name in POLICIES else _load_policy(name)
+
+
 def _load_policy(path: str):
     if path.endswith(".json"):  # a fitted base-throw map from `darts basemap`
         from darts.basemap import load_basemap_policy
@@ -105,11 +111,10 @@ def _eval(args: argparse.Namespace) -> int:
         return 2
     from darts.env import DartThrowEnv
     from darts.evaluate import evaluate
-    from darts.policies import POLICIES
 
     env = DartThrowEnv(load_twin(args.twin))
     seeds = list(range(args.seed, args.seed + args.n))
-    policy = POLICIES[args.policy] if args.policy in POLICIES else _load_policy(args.policy)
+    policy = _policy(args.policy)
     result = evaluate(env, policy, seeds) | {"policy": args.policy}
     print(json.dumps(result, indent=2))
     return 0 if result["meets_q13"] else 1
@@ -121,13 +126,12 @@ def _replay(args: argparse.Namespace) -> int:
         return 2
     from darts.env import DartThrowEnv
     from darts.interface import decode_action
-    from darts.policies import POLICIES
     from darts.render import render_throw
 
     twin = load_twin(args.twin)
     env = DartThrowEnv(twin)
     _, info = env.reset(seed=args.seed)
-    params, _ = decode_action(POLICIES[args.policy](env.state(), np.random.default_rng(args.seed)))
+    params, _ = decode_action(_policy(args.policy)(env.state(), np.random.default_rng(args.seed)))
     r = render_throw(twin, params, Path(args.out))
     ty, tz = info["target_yz_m"]
     print(f"target ({ty:+.3f}, {tz:+.3f}) m from centre; stuck={r.stuck} score={r.score}")
@@ -194,7 +198,7 @@ def main(argv: list[str] | None = None) -> int:
     ro.add_argument("--min-stuck", type=float, default=0.8, help="exit 1 below this stick rate")
     ro.add_argument("--twin", default="twin.yaml")
     rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
-    rp.add_argument("--policy", choices=["random", "hand"], default="hand")
+    rp.add_argument("--policy", default="hand", help="random, hand, or a basemap.json")
     rp.add_argument("--seed", type=int, default=0)
     rp.add_argument("--out", default="runs/replay.mp4")
     rp.add_argument("--twin", default="twin.yaml")
