@@ -4,14 +4,14 @@
 #
 #   RUNPOD_API_KEY=... ./scripts/pod_train.sh        (key from the environment only; never printed)
 #
-# Knobs (env): STEPS SEED RUN_ID GIT_REF RP_MAX_HOURLY_USD RP_MAX_LIFETIME_SECS RP_VCPU_COUNT
+# Knobs (env): STEPS SEED EVAL_EVERY RUN_ID GIT_REF RP_MAX_HOURLY_USD RP_MAX_LIFETIME_SECS RP_VCPU_COUNT
 set -euo pipefail
 cd "$(dirname "$0")/.."
 : "${RUNPOD_API_KEY:?set RUNPOD_API_KEY in the environment}"
 
 export RUN_ID="${RUN_ID:-v4-$(date +%Y%m%d-%H%M%S)}"
 export REF="${GIT_REF:-$(git rev-parse HEAD)}"
-export STEPS="${STEPS:-200000}" SEED="${SEED:-0}"
+export STEPS="${STEPS:-200000}" SEED="${SEED:-0}" EVAL_EVERY="${EVAL_EVERY:-10000}"
 export REPO="${REPO:-https://github.com/leejianrong/robot-arm-darts}"
 git branch -r --contains "$REF" | grep -q . || { echo "commit $REF is not pushed; push it first" >&2; exit 1; }
 
@@ -23,7 +23,7 @@ export RP_MAX_HOURLY_USD="${RP_MAX_HOURLY_USD:?set RP_MAX_HOURLY_USD (the most y
 export RP_MAX_LIFETIME_SECS="${RP_MAX_LIFETIME_SECS:-7200}"
 export RP_STATE_FILE="runs/.rp-state-$RUN_ID"
 job="$(base64 -w0 scripts/pod_job.sh)"
-export RP_JOB_CMD="export REF=$REF RUN_ID=$RUN_ID STEPS=$STEPS SEED=$SEED NENVS=$NENVS REPO=$REPO OMP_NUM_THREADS=1; echo $job | base64 -d | bash"
+export RP_JOB_CMD="export REF=$REF RUN_ID=$RUN_ID STEPS=$STEPS SEED=$SEED EVAL_EVERY=$EVAL_EVERY NENVS=$NENVS REPO=$REPO OMP_NUM_THREADS=1; echo $job | base64 -d | bash"
 
 WATCH="runs/$RUN_ID.watch.log"  # raw snapshots of the pod log, kept even if the pod vanishes
 mkdir -p runs
@@ -43,7 +43,7 @@ done
     sleep 60
     snap="$(./scripts/rp logs --tail 200 2>&1 || true)"
     printf '%s\n--- %s\n' "$snap" "$(date -u +%FT%TZ)" >> "$WATCH"
-    echo "$snap" | grep -E "STAGE|HEARTBEAT|WARN|ERROR" | tail -3
+    echo "$snap" | grep -E "STAGE|HEARTBEAT|WARN|ERROR|EVAL|ABORT" | tail -3
   done ) &
 WATCHER=$!
 ./scripts/rp relay-get "runs/.incoming-$RUN_ID"
