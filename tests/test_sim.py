@@ -22,8 +22,13 @@ def twin():
 
 @pytest.fixture(scope="module")
 def twin_1m(twin):
-    """The flight tests use round numbers: a board 1 m away, whatever twin.yaml says."""
-    return dataclasses.replace(twin, board=dataclasses.replace(twin.board, distance_m=1.0))
+    """The flight tests use round numbers: a board 1 m away on a 1.2 m mount, whatever twin.yaml
+    says (their launch point sits clear of the arm only at that height)."""
+    return dataclasses.replace(
+        twin,
+        board=dataclasses.replace(twin.board, distance_m=1.0),
+        mount=dataclasses.replace(twin.mount, height_m=1.2),
+    )
 
 
 def test_scene_path_exists():

@@ -27,4 +27,4 @@ board:                       # regulation: centre 1.73 m above floor, scoring ra
   stick_min_speed_m_s: 2.0   # guess: slower than this at the tip and the dart bounces off the cork
   stick_max_angle_rad: 0.9   # guess: more than ~50 deg off the board normal and it glances off
 mount:
-  height_m: 1.2              # arm base above the floor (a stand about waist height)
+  height_m: 1.4              # arm base above the floor: shoulder height of an average adult (about 1.4 m)
