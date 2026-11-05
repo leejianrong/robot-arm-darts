@@ -68,7 +68,7 @@ if [ "$STEPS" -gt 10000 ]; then  # the real code path on a tiny input before the
   step smoke 600 uv run darts train --steps 128 --n-envs 2 --seed "$SEED" --out "$WORK/smoke" || true
 fi
 set +e
-step train 5400 uv run darts train --steps "$STEPS" --n-envs "$NENVS" --seed "$SEED" --eval-every "${EVAL_EVERY:-10000}" --max-seconds 5000 --out "$RUN"
+step train 5400 uv run darts train --steps "$STEPS" --n-envs "$NENVS" --seed "$SEED" --scale "${SCALE:-0.25}" --n-steps "${N_STEPS:-64}" --batch-size "${BATCH_SIZE:-256}" --eval-every "${EVAL_EVERY:-10000}" --max-seconds 5000 --out "$RUN"
 echo "train exit code $?"
 set -e
 stage done

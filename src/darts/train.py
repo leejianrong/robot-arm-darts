@@ -154,7 +154,8 @@ def _aero_variant(twin: Twin, fin: float, damp: float, drag: float) -> Twin:
 
 def train(
     twin: Twin, steps: int, n_envs: int, seed: int, scale: float, out: Path,
-    eval_every: int = 10_000, max_seconds: float | None = None,
+    eval_every: int = 10_000, max_seconds: float | None = None, n_steps: int = 64,
+    batch_size: int = 256,
 ) -> dict:  # fmt: skip
     from stable_baselines3 import PPO
     from stable_baselines3.common.monitor import Monitor
@@ -169,7 +170,7 @@ def train(
         else DummyVecEnv([make])
     )
     model = PPO(
-        "MlpPolicy", venv, n_steps=64, batch_size=256, n_epochs=10, learning_rate=3e-4,
+        "MlpPolicy", venv, n_steps=n_steps, batch_size=batch_size, n_epochs=10, learning_rate=3e-4,
         policy_kwargs={"log_std_init": -1.0, "net_arch": [64, 64]}, seed=seed, device="cpu",
         verbose=1,
     )  # fmt: skip

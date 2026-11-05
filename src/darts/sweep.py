@@ -36,18 +36,22 @@ def square_arrival(r: ThrowResult) -> bool:
     return r.arrival_angle_rad <= MAX_ARRIVAL_RAD
 
 
+def throw_penalty(r: ThrowResult, stick_speed: float = 2.0) -> float:
+    """Metres of penalty for arriving at a slant, slower than the stick speed (with a margin), or
+    bouncing. Shared by the search cost and the training reward, so both want the same throw."""
+    penalty = ARRIVAL_PENALTY_M_PER_RAD * max(0.0, r.arrival_angle_rad - MAX_ARRIVAL_RAD)
+    penalty += SPEED_PENALTY_M_PER_M_S * max(0.0, stick_speed * SPEED_MARGIN - r.arrival_speed_m_s)
+    return penalty + (BOUNCE_PENALTY_M if r.hit_board and not r.stuck else 0.0)
+
+
 def cost(r: ThrowResult, stick_speed: float = 2.0) -> float:
-    """Lower is better. Valid throws are ranked by miss distance plus penalties for arriving at a
-    slant, slower than the stick speed (with a margin) or bouncing; others by how far short."""
+    """Lower is better. Valid throws are ranked by miss distance plus `throw_penalty`; others by
+    how far short."""
     if not r.released or r.slipped_early or r.diverged or r.collided:
         return 100.0
     if not r.crossed_plane:
         return 10.0 + r.shortfall_m
-    penalty = ARRIVAL_PENALTY_M_PER_RAD * max(0.0, r.arrival_angle_rad - MAX_ARRIVAL_RAD)
-    penalty += SPEED_PENALTY_M_PER_M_S * max(0.0, stick_speed * SPEED_MARGIN - r.arrival_speed_m_s)
-    if r.hit_board and not r.stuck:
-        penalty += BOUNCE_PENALTY_M
-    return r.miss_m + penalty
+    return r.miss_m + throw_penalty(r, stick_speed)
 
 
 @dataclass
