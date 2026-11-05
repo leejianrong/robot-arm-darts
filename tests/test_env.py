@@ -65,6 +65,18 @@ def test_a_bounce_on_target_is_not_a_hit():
     assert bounce_reward < stuck_reward - 0.1
 
 
+def test_a_square_fast_arrival_earns_more_than_a_slanted_slow_one_at_the_same_spot():
+    env = env_with(result())
+    _, info = env.reset(seed=3)
+    y, z = info["target_yz_m"]
+    good = result(board_yz=(y, z), arrival_angle_rad=0.2, arrival_speed_m_s=3.0)
+    bad = result(board_yz=(y, z), arrival_angle_rad=1.2, arrival_speed_m_s=1.0)
+    env.sim.result = good
+    r_good = env.step(np.zeros(ACTION_DIM))[1]
+    env.sim.result = bad
+    assert r_good > env.step(np.zeros(ACTION_DIM))[1] + 0.2
+
+
 def test_step_flags_a_clipped_action():
     env = env_with(result())
     env.reset(seed=0)

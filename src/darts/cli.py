@@ -77,7 +77,7 @@ def _train(args: argparse.Namespace) -> int:
         return 2
     m = train(
         load_twin(args.twin), args.steps, args.n_envs, args.seed, args.scale, Path(args.out),
-        args.eval_every, args.max_seconds,
+        args.eval_every, args.max_seconds, args.n_steps, args.batch_size,
     )  # fmt: skip
     print(json.dumps(m, indent=2))
     return 0  # the Q13 verdict is in metrics.json; a finished run is not a failure
@@ -158,6 +158,8 @@ def main(argv: list[str] | None = None) -> int:
     tr.add_argument("--n-envs", type=int, default=8)
     tr.add_argument("--seed", type=int, default=0)
     tr.add_argument("--scale", type=float, default=0.25, help="size of the learned correction")
+    tr.add_argument("--n-steps", type=int, default=64, help="PPO rollout length per env")
+    tr.add_argument("--batch-size", type=int, default=256, help="PPO minibatch size")
     tr.add_argument("--eval-every", type=int, default=10_000, help="steps between checkpoints")
     tr.add_argument("--max-seconds", type=float, help="stop gracefully (and save) after this long")
     tr.add_argument("--out", default="runs/train")

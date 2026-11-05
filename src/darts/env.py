@@ -8,19 +8,21 @@ import numpy as np
 
 from darts.interface import ACTION_DIM, STATE_DIM, State, decode_action, target_state
 from darts.sim import ThrowResult, ThrowSim
+from darts.sweep import throw_penalty
 from darts.twin import Twin
 
 log = logging.getLogger(__name__)
 INVALID_REWARD = -2.0  # the arm failed to make a throw at all (slip, collision, solver blow-up)
 SHORT_REWARD = -1.0  # the dart never reached the board; shortfall is subtracted on top
-BOUNCE_PENALTY = 0.2  # a dart that hits but does not stick is not a hit (PPO farmed bounces)
+MAX_MISS_M = 1.0  # a dart that lands far off the board is no worse than one 1 m away
 
 
 class DartThrowEnv(gym.Env):
     """Observation is the state interface, action is the throw (see `interface.py`).
 
-    Reward is the negative distance from where the dart met the board to the target, plus a
-    penalty if it does not stick, and no tip error is reported. Terminates after the single step.
+    Reward is the negative distance from where the dart met the board plane to the target, minus
+    the search's arrival penalties (slant, too slow, bouncing: PPO farmed bounces when they paid).
+    Only a stuck dart reports a tip error. Terminates after the single step.
     """
 
     metadata = {"render_modes": []}
@@ -49,11 +51,12 @@ class DartThrowEnv(gym.Env):
         """(reward, tip-to-target distance, or None if the dart did not reach the board)."""
         if not r.released or r.slipped_early or r.diverged or r.collided:
             return INVALID_REWARD, None
-        if not r.hit_board:
-            return SHORT_REWARD - r.shortfall_m if not r.crossed_plane else -r.miss_m, None
+        if not r.crossed_plane:
+            return SHORT_REWARD - r.shortfall_m, None
         y, z = r.board_yz
         dist = float(np.hypot(y - self._target[1], z - self._target[0]))
-        return (-dist, dist) if r.stuck else (-dist - BOUNCE_PENALTY, None)
+        reward = -min(dist, MAX_MISS_M) - throw_penalty(r, self.twin.board.stick_min_speed_m_s)
+        return reward, dist if r.stuck else None  # only a stuck dart counts as a hit
 
     def step(self, action: np.ndarray):
         params, clipped = decode_action(np.asarray(action, dtype=np.float64))
