@@ -65,7 +65,8 @@ def test_spend_guard_deletes_only_my_pod_once_over_the_cap(tmp_path):
     pods = [
         {"id": "mine", "name": "darts-t", "costPerHr": 3.6, **run},
         {"id": "theirs", "name": "other-job", "costPerHr": 9.0, **run},
-    ]
+        {"id": "gone", "name": "darts-old", "costPerHr": 0.3, "desiredStatus": "EXITED"},
+    ]  # an exited pod has no uptimeSeconds
     (tmp_path / "pods.json").write_text(json.dumps(pods))
     shim = tmp_path / "runpodctl"
     shim.write_text(
@@ -79,4 +80,4 @@ def test_spend_guard_deletes_only_my_pod_once_over_the_cap(tmp_path):
     guard = [str(ROOT / "scripts/rp_guard.py"), "--cap-usd", "2", "--interval", "1"]
     with contextlib.suppress(subprocess.TimeoutExpired):  # the guard loops until stopped
         subprocess.run(guard, env=env, capture_output=True, text=True, timeout=4)
-    assert set((tmp_path / "deleted").read_text().split()) == {"mine"}
+    assert set((tmp_path / "deleted").read_text().split()) == {"mine", "gone"}  # never "theirs"
