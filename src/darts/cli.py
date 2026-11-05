@@ -61,6 +61,10 @@ def _drop(args: argparse.Namespace) -> int:
 
 
 def _load_policy(path: str):
+    if path.endswith(".json"):  # a fitted base-throw map from `darts basemap`
+        from darts.basemap import load_basemap_policy
+
+        return load_basemap_policy(path)
     from darts.train import load_policy
 
     return load_policy(path)
@@ -81,6 +85,18 @@ def _train(args: argparse.Namespace) -> int:
     )  # fmt: skip
     print(json.dumps(m, indent=2))
     return 0  # the Q13 verdict is in metrics.json; a finished run is not a failure
+
+
+def _basemap(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.basemap import run
+
+    m = run(load_twin(args.twin), args.targets, args.budget, args.workers, args.rounds, args.seed,
+            Path(args.out), args.max_seconds)  # fmt: skip
+    print(json.dumps(m, indent=2))
+    return 0 if m["fit"] else 1
 
 
 def _eval(args: argparse.Namespace) -> int:
@@ -138,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     throw.add_argument("--scripted", action="store_true", required=True)
     throw.add_argument("--twin", default="twin.yaml")
     throw.add_argument("--seed", type=int, default=1)
-    throw.add_argument("--maxiter", type=int, default=60)
+    throw.add_argument("--maxiter", type=int, default=80)
     throw.add_argument("--popsize", type=int, default=20)
     throw.add_argument("--out", default="runs/v1")
     throw.add_argument("--no-video", action="store_true")
@@ -164,6 +180,15 @@ def main(argv: list[str] | None = None) -> int:
     tr.add_argument("--max-seconds", type=float, help="stop gracefully (and save) after this long")
     tr.add_argument("--out", default="runs/train")
     tr.add_argument("--twin", default="twin.yaml")
+    bm = sub.add_parser("basemap", help="solve a throw per board target and fit a base policy")
+    bm.add_argument("--targets", type=int, default=80)
+    bm.add_argument("--budget", type=int, default=4000, help="throws per target per round")
+    bm.add_argument("--rounds", type=int, default=2, help="later rounds redo unsolved targets")
+    bm.add_argument("--workers", type=int, default=4)
+    bm.add_argument("--seed", type=int, default=0)
+    bm.add_argument("--max-seconds", type=float, help="stop gracefully and fit what is solved")
+    bm.add_argument("--out", default="runs/basemap")
+    bm.add_argument("--twin", default="twin.yaml")
     ro = sub.add_parser("robust", help="how often a throw sticks across the aero guesses")
     ro.add_argument("--report", default="runs/v1/report.json", help="a throw report.json")
     ro.add_argument("--min-stuck", type=float, default=0.8, help="exit 1 below this stick rate")
@@ -179,6 +204,7 @@ def main(argv: list[str] | None = None) -> int:
         "drop": _drop,
         "eval": _eval,
         "train": _train,
+        "basemap": _basemap,
         "robust": _robust,
         "replay": _replay,
     }[args.cmd](args)

@@ -62,14 +62,21 @@ step() {
 command -v uv >/dev/null || step pip 300 pip install -q uv
 step clone 300 git clone -q "$REPO" "$WORK/src"
 cd "$WORK/src" && git checkout -q "$REF"
-step install 900 uv sync -q --extra train
+JOB=${JOB:-train}
+step install 900 uv sync -q $([ "$JOB" = train ] && echo --extra train)
 step assets 600 make assets
-if [ "$STEPS" -gt 10000 ]; then  # the real code path on a tiny input before the long step
-  step smoke 600 uv run darts train --steps 128 --n-envs 2 --seed "$SEED" --out "$WORK/smoke" || true
-fi
 set +e
-step train 5400 uv run darts train --steps "$STEPS" --n-envs "$NENVS" --seed "$SEED" --scale "${SCALE:-0.25}" --n-steps "${N_STEPS:-64}" --batch-size "${BATCH_SIZE:-256}" --eval-every "${EVAL_EVERY:-10000}" --max-seconds 5000 --out "$RUN"
-echo "train exit code $?"
+case "$JOB" in
+train)
+  if [ "$STEPS" -gt 10000 ]; then  # the real code path on a tiny input before the long step
+    step smoke 600 uv run darts train --steps 128 --n-envs 2 --seed "$SEED" --out "$WORK/smoke" || true
+  fi
+  step train 5400 uv run darts train --steps "$STEPS" --n-envs "$NENVS" --seed "$SEED" --scale "${SCALE:-0.25}" --n-steps "${N_STEPS:-64}" --batch-size "${BATCH_SIZE:-256}" --eval-every "${EVAL_EVERY:-10000}" --max-seconds 5000 --out "$RUN" ;;
+basemap)
+  step smoke 600 uv run darts basemap --targets 4 --budget 8 --rounds 1 --workers 2 --out "$WORK/smoke" || true
+  step basemap 5400 uv run darts basemap --targets "${BASEMAP_TARGETS:-80}" --budget "${BASEMAP_BUDGET:-4000}" --rounds 2 --workers "$NENVS" --seed "$SEED" --max-seconds 4500 --out "$RUN" ;;
+esac
+echo "$JOB exit code $?"
 set -e
 stage done
 publish
