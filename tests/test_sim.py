@@ -205,3 +205,12 @@ def test_training_logs_progress_and_stops_on_its_time_budget(twin, tmp_path, mon
     assert (tmp_path / "checkpoint.zip").exists() and (tmp_path / "policy.zip").exists()
     assert m["aborted"] == "time budget 0s used" and (tmp_path / "abort.txt").exists()
     assert len(m["aero_corners"]) == 2
+
+
+def test_robustness_misses_are_measured_from_the_target(twin):
+    from darts.policies import _BEST
+    from darts.robust import robustness
+
+    near = robustness(twin, _BEST)["median_miss_m"]
+    shifted = robustness(twin, _BEST, target_yz=(0.0, 0.5))["median_miss_m"]
+    assert shifted > near + 0.3
