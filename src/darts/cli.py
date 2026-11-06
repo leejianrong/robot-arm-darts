@@ -146,7 +146,7 @@ def _robust(args: argparse.Namespace) -> int:
     from darts.robust import robustness
 
     params = ThrowParams(**json.loads(Path(args.report).read_text())["best_params"])
-    result = robustness(load_twin(args.twin), params)
+    result = robustness(load_twin(args.twin), params, tuple(args.target))
     print(json.dumps(result, indent=2))
     return 0 if result["stuck_rate"] >= args.min_stuck else 1
 
@@ -196,6 +196,14 @@ def main(argv: list[str] | None = None) -> int:
     ro = sub.add_parser("robust", help="how often a throw sticks across the aero guesses")
     ro.add_argument("--report", default="runs/v1/report.json", help="a throw report.json")
     ro.add_argument("--min-stuck", type=float, default=0.8, help="exit 1 below this stick rate")
+    ro.add_argument(
+        "--target",
+        type=float,
+        nargs=2,
+        default=(0.0, 0.0),
+        metavar=("Y", "Z"),
+        help="aim offset from the board centre, m",
+    )
     ro.add_argument("--twin", default="twin.yaml")
     rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
     rp.add_argument("--policy", default="hand", help="random, hand, or a basemap.json")

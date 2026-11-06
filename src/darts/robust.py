@@ -29,14 +29,22 @@ def aero_variant(twin: Twin, fin: float, damp: float, drag: float) -> Twin:
     )
 
 
-def robustness(twin: Twin, params: ThrowParams) -> dict:
-    """Throw once per aero guess and release-time jitter, and report how often the dart sticks."""
+def robustness(
+    twin: Twin, params: ThrowParams, target_yz: tuple[float, float] = (0.0, 0.0)
+) -> dict:
+    """Throw once per aero guess and release-time jitter, and report how often the dart sticks.
+
+    Misses are measured from `target_yz` (offsets from the board centre), not from the centre."""
     stuck, misses = [], []
     for fin, damp, drag, jit in product(FIN_TORQUE, SPIN_DAMPING, DRAG, RELEASE_JITTER_S):
         p = dataclasses.replace(params, t_release_s=params.t_release_s + jit)
         r = ThrowSim(aero_variant(twin, fin, damp, drag)).throw(p)
         stuck.append(r.stuck)
-        misses.append(r.miss_m if r.stuck else np.inf)
+        misses.append(
+            np.hypot(r.board_yz[0] - target_yz[0], r.board_yz[1] - target_yz[1])
+            if r.stuck
+            else np.inf
+        )
     worst = max(misses)
     return {
         "n": len(stuck),
