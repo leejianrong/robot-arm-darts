@@ -75,6 +75,18 @@ train)
 basemap)
   step smoke 600 uv run darts basemap --targets 4 --budget 8 --rounds 1 --workers 2 --out "$WORK/smoke" || true
   step basemap 5400 uv run darts basemap --targets "${BASEMAP_TARGETS:-80}" --budget "${BASEMAP_BUDGET:-4000}" --rounds 2 --workers "$NENVS" --seed "$SEED" --max-seconds 4500 --out "$RUN" ;;
+reach)  # how fast must the joints be to hit a board at REACH_DIST? one scripted search per speed
+  pids=""
+  for v in $REACH_SPEEDS; do
+    uv run python -c "
+import yaml; t = yaml.safe_load(open('twin.yaml'))
+t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v
+yaml.safe_dump(t, open('$WORK/twin_$v.yaml', 'w'))"
+    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 --twin "$WORK/twin_$v.yaml" --out "$RUN/v$v" > "$WORK/reach_$v.log" 2>&1
+     echo "RESULT speed=$v rad/s dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_$v.log" | tr '\n' ' ')") &
+    pids="$pids $!"
+  done
+  stage reach; wait $pids ;;
 esac
 echo "$JOB exit code $?"
 set -e
