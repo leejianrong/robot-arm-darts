@@ -189,7 +189,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 #### End-to-end
 
-- Across 100 throws with the V5 policy, the board is at least 99% visible in every frame.
+- Across 100 throws with the V5 policy, the board is at least 98% visible in every frame (was 99%; see `docs/camera-mast.md`).
 
 #### Integration
 

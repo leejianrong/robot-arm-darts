@@ -54,7 +54,7 @@ Fit a base throw for every board target (a search per target, then a cubic map; 
 
 Train a PPO correction on the hand throw (on a RunPod pod via `scripts/pod_train.sh`, not the laptop): `darts train --steps 200000 --eval-every 10000 --max-seconds 5000`. It logs a held-out `EVAL` line and saves a checkpoint at each interval, aborts on a stop rule, and ends with the held-out result at nominal and extreme aero values in `metrics.json`.
 
-The mast camera (`camera` in `twin.yaml`, ADR-0007) is a 640x480 pinhole 0.45 m to the side of the arm looking at the board centre; `darts.camera.project` gives the pixel of any world point, checked against a rendered marker to half a pixel. Render one policy throw at a seeded board target to a slow-motion mp4 in a pub corner (a render-only room, `src/darts/room.py`, with no collisions; needs `libosmesa6`, or EGL on a GPU pod; about 80 s with OSMesa):
+The mast camera (`camera` in `twin.yaml`, ADR-0007) is a 640x480 pinhole on a raised mast 0.6 m to the side of the arm looking at the board centre (`darts visibility` checks the arm never hides more than 2% of the board; `docs/camera-mast.md`); `darts.camera.project` gives the pixel of any world point, checked against a rendered marker to half a pixel. Render one policy throw at a seeded board target to a slow-motion mp4 in a pub corner (a render-only room, `src/darts/room.py`, with no collisions; needs `libosmesa6`, or EGL on a GPU pod; about 80 s with OSMesa):
 
 ```console
 $ MUJOCO_GL=osmesa uv run darts replay --policy docs/baselines/basemap.json --seed 3 --out runs/replay.mp4

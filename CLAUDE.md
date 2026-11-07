@@ -9,7 +9,7 @@ Trust the code over the docs where they disagree, then fix the docs. Built throu
 ## Commands
 
 - `make install`, `make assets`, `make hooks` once per clone; `make check` is the pre-push gate; `make test-all` adds the integration layer.
-- `make assets` fetches the pinned Menagerie SO-101 model into the gitignored `assets/menagerie/`. Integration tests skip without it.
+- `make assets` fetches the pinned Menagerie SO-101 model into the gitignored `assets/menagerie/`. Integration tests skip without it; the render tests (camera marker, visibility) also need `MUJOCO_GL=osmesa` and skip otherwise.
 - Python 3.12, uv. Training and rendering run on RunPod (ADR-0002); `darts throw` and `darts replay` render video, which needs `libosmesa6` and `MUJOCO_GL=osmesa` locally (about 80 s a clip), or EGL on a GPU pod.
 
 - `scripts/pod_train.sh` runs `JOB=train` (default) or `JOB=basemap` (the per-target base-throw search; CPU only, no torch). `scripts/rp_guard.py` enforces a spend cap from the laptop: run it detached before any pod, with the key in the environment.
