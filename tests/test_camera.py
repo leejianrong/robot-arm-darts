@@ -3,7 +3,7 @@ import dataclasses
 import numpy as np
 import pytest
 
-from darts.camera import intrinsics, pose, project
+from darts.camera import pose, project
 from darts.twin import load_twin
 
 

@@ -7,8 +7,8 @@ from pathlib import Path
 import mujoco
 import numpy as np
 
-from darts.aero import aero_wrench
 from darts import camera
+from darts.aero import aero_wrench
 from darts.board import board_texture, score_tip
 from darts.room import add_room
 from darts.twin import Twin
