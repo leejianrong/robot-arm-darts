@@ -9,6 +9,7 @@ import numpy as np
 
 from darts.aero import aero_wrench
 from darts.board import board_texture, score_tip
+from darts.room import add_room
 from darts.twin import Twin
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -66,7 +67,8 @@ def build_model(twin: Twin, visual: bool = False) -> mujoco.MjModel:
         size=[twin.board.radius_m, 0.01, 0],
         rgba=[0.1, 0.1, 0.1, 1],
     )
-    if visual:  # a painted square in front of the face, for replays only
+    if visual:  # a painted square in front of the face, and a pub around it, for replays only
+        add_room(spec, twin)
         img = board_texture()
         spec.add_texture(
             name="board", type=mujoco.mjtTexture.mjTEXTURE_2D, width=img.shape[1],
