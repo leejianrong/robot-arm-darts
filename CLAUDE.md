@@ -10,9 +10,9 @@ Trust the code over the docs where they disagree, then fix the docs. Built throu
 
 - `make install`, `make assets`, `make hooks` once per clone; `make check` is the pre-push gate; `make test-all` adds the integration layer.
 - `make assets` fetches the pinned Menagerie SO-101 model into the gitignored `assets/menagerie/`. Integration tests skip without it; the render tests (camera marker, visibility) also need `MUJOCO_GL=osmesa` and skip otherwise.
-- Python 3.12, uv. Training and rendering run on RunPod (ADR-0002); `darts throw` and `darts replay` render video, which needs `libosmesa6` and `MUJOCO_GL=osmesa` locally (about 80 s a clip), or EGL on a GPU pod.
+- Python 3.12, uv. Training and rendering run on RunPod (ADR-0002); `darts throw` and `darts replay` render video, which needs `libosmesa6` and `MUJOCO_GL=osmesa` locally (about 80 s a clip), or on a CPU pod (`JOB=render`, same pixels as the laptop; EGL fails without a GPU, `docs/camera-mast.md`).
 
-- `scripts/pod_train.sh` runs `JOB=train` (default) or `JOB=basemap` (the per-target base-throw search; CPU only, no torch). `scripts/rp_guard.py` enforces a spend cap from the laptop: run it detached before any pod, with the key in the environment.
+- `scripts/pod_train.sh` runs `JOB=train` (default) or `JOB=render` (GL check, `scripts/gl_check.py`) or `JOB=basemap` (the per-target base-throw search; CPU only, no torch). `scripts/rp_guard.py` enforces a spend cap from the laptop: run it detached before any pod, with the key in the environment.
 - Training: `uv sync --extra train` (CPU torch + SB3), then `scripts/pod_train.sh` runs it on RunPod and needs `RUNPOD_API_KEY` and `RP_MAX_HOURLY_USD` in the environment. Do not train on the laptop: 7 GB RAM, it swaps and the machine lags. A run writes `metrics.jsonl` and a checkpoint every `--eval-every` steps, prints `EVAL` lines, and stops itself with an `ABORT <why>` line (diverged above 1%, on-board rate 25 points under the hand throw, RAM above 90%, time budget) while still saving and publishing.
 
 ## Rules that are not obvious
