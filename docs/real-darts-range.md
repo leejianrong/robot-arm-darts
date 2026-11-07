@@ -131,6 +131,25 @@ Reading:
 
 Next in the spike: model the extra link mass and re-run the 2.37 m search with an AK60-6 (9 N.m, 33.5 rad/s) on the shoulder and elbow only, and the stock servos elsewhere.
 
+## Power-joint search with added actuator mass (2.37 m)
+
+`twin.yaml` has a `power` section: bigger actuators on shoulder_lift and elbow_flex only (stock servo elsewhere), with the actuator's mass added to the shoulder body and the upper arm. Off by default (`torque_limit_nm: 0`). Same reach search, seed 1, `REACH_POWER_SETS` on the pod job. Sets are torque : no-load speed : shoulder mass : elbow mass.
+
+| Case | Best throw | Miss | Release | Sticks in 54 aero and timing variants |
+|---|---|---|---|---|
+| AK60-6, no added mass (9 N.m, 33.5 rad/s) | 5.1 m/s, 42 deg, from 1.32 m | 1 mm | 177 deg off its path | 22% |
+| AK60-6, 0.38 kg on shoulder and elbow | 5.0 m/s, 43 deg, from 1.31 m | 4 mm | 175 deg off its path | 20% |
+| RMD-X6-8-like (10 N.m, 32.5 rad/s, 0.65 kg each) | 5.0 m/s, 29 deg, from 1.88 m | 5 mm | 13 deg off | 24% |
+| AK70-10 (24.8 N.m, 25.1 rad/s, 0.52 kg each) | 9.4 m/s, 2 deg, from 1.88 m | 0 mm | 17 deg off | 56%, median miss 3 cm |
+
+Reading:
+- Every case finds a throw that hits the centre, so reach is not the limit with this class of actuator, and the added 0.4 to 0.65 kg did not stop it.
+- None of the throws is reliable. The search returns the single luckiest throw (a 1 mm miss), spins the dart at 54 to 59 rad/s (earlier 0.5 m throws spun at 6 to 18), and the AK60 throws release the dart tail-first. Across the aero guesses and +/-10 ms of release timing they stick only 20 to 56% of the time. This is the same knife-edge pattern as the V4 tumbling result; a reachable board is not yet a throwable one.
+- The AK70's 9.4 m/s release is above the 6 m/s that CLAUDE.md treats as a likely artifact; do not trust it.
+- The earlier flat-torque and derated sweeps used the same objective and were not checked for robustness either. Their "hits" show reach, not reliable throws.
+
+Next: make the search objective robust (average the cost over release-time jitter and aero variants, and penalise tail-first or very fast spin releases) and re-run these four cases. Until then no actuator is confirmed.
+
 ## Sanity check against human throwers
 
 Sources were thin. Joint-speed numbers for dart throwers were not in the search results (the full texts of Nasu et al. 2014, PLoS ONE, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6797117/ and the JHSE joint-kinematics paper are the places to look).

@@ -227,3 +227,21 @@ def test_torque_that_falls_with_speed_gives_a_slower_release(twin):
     curved = dataclasses.replace(strong, no_load_speed_rad_s=9.0)
     real = ThrowSim(dataclasses.replace(twin, servo=curved)).throw(_BEST)
     assert real.release_speed_m_s < flat.release_speed_m_s - 0.5
+
+
+def test_power_joints_add_mass_and_raise_the_release_speed(twin):
+    from darts.policies import _BEST
+
+    pw = dataclasses.replace(
+        twin.power, torque_limit_nm=9.0, no_load_speed_rad_s=33.5, velocity_limit_rad_s=33.5
+    )
+    strong = dataclasses.replace(twin, power=pw)
+    assert (
+        ThrowSim(strong).throw(_BEST).release_speed_m_s
+        > ThrowSim(twin).throw(_BEST).release_speed_m_s + 1
+    )
+    heavy = dataclasses.replace(strong, power=dataclasses.replace(pw, elbow_mass_kg=0.4))
+    upper = build_model(twin).body("upper_arm").id
+    assert build_model(heavy).body_mass[upper] == pytest.approx(
+        build_model(twin).body_mass[upper] + 0.4
+    )
