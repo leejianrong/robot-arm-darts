@@ -110,6 +110,16 @@ Corrections: `docs/v1-feasibility.md` once said a 12 V STS3215 reaches about 7 r
 
 Conversions: rpm x 2 pi / 60 = rad/s; kg.cm x 0.0981 = N.m.
 
+## Sanity check against human throwers
+
+Sources were thin. Joint-speed numbers for dart throwers were not in the search results (the full texts of Nasu et al. 2014, PLoS ONE, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6797117/ and the JHSE joint-kinematics paper are the places to look).
+
+- Release speed: one page in the search results (not identified, treat as unverified) gives about 5.5 m/s for experienced overhand throwers. The ballistic table above needs 4.8 to 5.4 m/s at a 20 to 30 deg release, so the target speed matches a human throw.
+- Joint speed (arithmetic, not a measurement): 5.5 m/s at the fingertip with a 0.45 to 0.6 m reach is 9 to 12 rad/s, or 525 to 700 deg/s. The 12 to 16 rad/s the sim needs is the same order as that, a bit higher because the sim's throw is a planar swing with no wrist snap.
+- Power (arithmetic from the model): the arm's moving links weigh about 0.5 kg. Moving them at an average of about 2.5 m/s is about 1.6 J, in about 0.15 s: roughly 10 W average and 25 to 30 W at the peak, which matches the sweep. A human forearm and hand (about 1.3 kg, general anatomy figure, not from the sources) reaching the same speeds needs about 60 W, which muscle supplies easily; the dart itself (10 g at 5.5 m/s) carries only 0.15 J.
+
+Conclusion: the numbers make sense. Speed matches a human throw, and the power is small for muscle but several times what a 3 W hobby servo can deliver. The gap is the actuators, not the physics.
+
 ## Open items
 
 - Shortlist real BLDC actuators with datasheets (torque, speed, mass, price, control interface) that give 8 to 10 N.m at 12 to 16 rad/s; fit their torque-speed curve instead of the straight line.
