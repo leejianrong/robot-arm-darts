@@ -49,7 +49,7 @@ def _hand_collision_geoms(model: mujoco.MjModel) -> set[int]:
 
 
 def servo_limits(twin: Twin, joint: str) -> tuple[float, float, float]:
-    """(torque, no-load speed, command slew) rad/s for a joint: the big actuator or the stock servo."""
+    """(torque N.m, no-load rad/s, command slew rad/s) for a joint: big actuator or stock servo."""
     sv, pw = twin.servo, twin.power
     if joint in POWER_JOINTS and pw.torque_limit_nm > 0:
         return pw.torque_limit_nm, pw.no_load_speed_rad_s, pw.velocity_limit_rad_s
