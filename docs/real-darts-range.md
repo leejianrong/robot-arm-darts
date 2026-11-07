@@ -71,10 +71,16 @@ Reproduce the table:
 
 ```python
 import math
+
 g, dx, dz = 9.81, 2.27, -0.17
 for deg in (10, 20, 30, 45):
     a = math.radians(deg)
     v = math.sqrt(g * dx**2 / (2 * math.cos(a) ** 2 * (dx * math.tan(a) - dz)))
     t = dx / (v * math.cos(a))
-    print(deg, round(v, 2), round(t, 2), round(math.degrees(math.atan2(g * t - v * math.sin(a), v * math.cos(a)))))
+    print(
+        deg,
+        round(v, 2),
+        round(t, 2),
+        round(math.degrees(math.atan2(g * t - v * math.sin(a), v * math.cos(a)))),
+    )
 ```
