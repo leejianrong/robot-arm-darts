@@ -54,11 +54,11 @@ Fit a base throw for every board target (a search per target, then a cubic map; 
 
 Train a PPO correction on the hand throw (on a RunPod pod via `scripts/pod_train.sh`, not the laptop): `darts train --steps 200000 --eval-every 10000 --max-seconds 5000`. It logs a held-out `EVAL` line and saves a checkpoint at each interval, aborts on a stop rule, and ends with the held-out result at nominal and extreme aero values in `metrics.json`.
 
-Render one policy throw at a seeded board target to a slow-motion mp4 (needs `libosmesa6`, or EGL on a GPU pod; about 80 s with OSMesa):
+Render one policy throw at a seeded board target to a slow-motion mp4 in a pub corner (a render-only room, `src/darts/room.py`, with no collisions; needs `libosmesa6`, or EGL on a GPU pod; about 80 s with OSMesa):
 
 ```console
-$ MUJOCO_GL=osmesa uv run darts replay --policy hand --seed 3 --out runs/replay.mp4
-target (+0.050, +0.004) m from centre; stuck=True score=16
+$ MUJOCO_GL=osmesa uv run darts replay --policy docs/baselines/basemap.json --seed 3 --out runs/replay.mp4
+target (+0.050, +0.004) m from centre; stuck=True score=14
 video: runs/replay.mp4
 ```
 

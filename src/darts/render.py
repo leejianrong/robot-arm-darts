@@ -22,8 +22,8 @@ def render_throw(twin: Twin, params: ThrowParams, out: Path) -> ThrowResult:
     renderer = mujoco.Renderer(sim.model, height=480, width=640)
     cam = mujoco.MjvCamera()
     cam.type = mujoco.mjtCamera.mjCAMERA_FREE
-    cam.lookat[:] = (twin.board.distance_m * 0.5, 0.0, twin.board.centre_height_m - 0.15)
-    cam.distance, cam.azimuth, cam.elevation = 1.7, 55.0, -8.0
+    cam.lookat[:] = (twin.board.distance_m * 0.5, 0.0, twin.board.centre_height_m - 0.4)
+    cam.distance, cam.azimuth, cam.elevation = 3.1, 38.0, -12.0
 
     def frame() -> np.ndarray:
         renderer.update_scene(sim.data, camera=cam)
