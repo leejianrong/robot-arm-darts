@@ -19,3 +19,15 @@ Chosen: (0.0, 0.6, 2.5). The check passes at 98%, not the 99% first written in t
 ## Why 0.5 m is the hard case
 
 At 0.5 m the hand works within half a metre of the board, so any camera near the arm sees the arm in front of it. At the 2.37 m design range (`docs/real-darts-range.md`) the arm stays near the throw line and the board is far away, so a mast beside the arm should see it unobstructed at a flatter angle. Re-run `darts visibility` and re-pick the pose when `board.distance_m` changes.
+
+## Headless rendering (DART-20)
+
+`scripts/gl_check.py` renders the mast camera, finds a marker in a segmentation image and measures the board's pixel count; `JOB=render scripts/pod_train.sh` runs it on a pod (CPU, `python:3.12`, 8 vCPU) under both backends. Result, 2026-11-08:
+
+| Host | `MUJOCO_GL` | Image | Focal | Marker centre vs pinhole | Board px | Worst visible (seed 10000) |
+|---|---|---|---|---|---|---|
+| laptop (WSL) | osmesa | 480x640 | 415.692 | (355.11, 273.64) vs (355.05, 273.75) | 7926 | 98.65% |
+| pod (CPU) | osmesa | 480x640 | 415.692 | identical | 7926 | 98.65% |
+| laptop, pod | egl | fails (`EGLError`): no GPU, no `nvidia-smi` | | | | |
+
+OSMesa is the headless backend: it needs `apt install libosmesa6` and gives the same pixels on the laptop and the pod. EGL needs a GPU pod, which nothing so far calls for (a clip takes about 80 s on OSMesa). If rendering ever becomes the bottleneck, try EGL on a GPU template and re-run `gl_check.py` to compare against this table.
