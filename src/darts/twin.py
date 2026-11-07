@@ -25,6 +25,7 @@ class Servo:
     kv: float
     torque_limit_nm: float
     velocity_limit_rad_s: float
+    no_load_speed_rad_s: float  # torque falls linearly to zero at this speed; 0 keeps it flat
 
 
 @dataclass(frozen=True)

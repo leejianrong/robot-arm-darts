@@ -292,7 +292,19 @@ class ThrowSim:
         a, v = self._dart_qadr, self._dart_vadr
         return self.data.qpos[a : a + 3].copy(), self.data.qvel[v : v + 3].copy()
 
+    def _derate_torque(self) -> None:
+        """Torque falls linearly with joint speed, to zero at the servo's no-load speed."""
+        m, d, sv = self.model, self.data, self.twin.servo
+        if sv.no_load_speed_rad_s <= 0:
+            return
+        for n in ARM_JOINTS:
+            a = self._aid[n]
+            speed = abs(d.qvel[m.jnt_dofadr[m.actuator_trnid[a, 0]]])
+            limit = sv.torque_limit_nm * max(0.0, 1.0 - speed / sv.no_load_speed_rad_s)
+            m.actuator_forcerange[a] = (-limit, limit)
+
     def _command(self, p: ThrowParams, t: float) -> None:
+        self._derate_torque()
         for n, target in zip(THROW_JOINTS, p.q_end, strict=True):
             self._slew(n, target)
         if t >= p.t_release_s:

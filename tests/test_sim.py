@@ -214,3 +214,16 @@ def test_robustness_misses_are_measured_from_the_target(twin):
     near = robustness(twin, _BEST)["median_miss_m"]
     shifted = robustness(twin, _BEST, target_yz=(0.0, 0.5))["median_miss_m"]
     assert shifted > near + 0.3
+
+
+def test_torque_that_falls_with_speed_gives_a_slower_release(twin):
+    """A servo with the same stall torque but a finite no-load speed throws slower."""
+    from darts.policies import _BEST
+
+    strong = dataclasses.replace(
+        twin.servo, torque_limit_nm=6.0, velocity_limit_rad_s=9.0, no_load_speed_rad_s=0.0
+    )
+    flat = ThrowSim(dataclasses.replace(twin, servo=strong)).throw(_BEST)
+    curved = dataclasses.replace(strong, no_load_speed_rad_s=9.0)
+    real = ThrowSim(dataclasses.replace(twin, servo=curved)).throw(_BEST)
+    assert real.release_speed_m_s < flat.release_speed_m_s - 0.5
