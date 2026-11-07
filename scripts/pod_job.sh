@@ -64,7 +64,8 @@ step clone 300 git clone -q "$REPO" "$WORK/src"
 cd "$WORK/src" && git checkout -q "$REF"
 JOB=${JOB:-train}
 step install 900 uv sync -q $([ "$JOB" = train ] && echo --extra train)
-step assets 600 make assets
+export GIT_TERMINAL_PROMPT=0  # a hung credential prompt once sat in this step for 16 minutes
+step assets 240 timeout -s KILL 200 make assets || { rm -rf assets/menagerie; step assets_retry 240 timeout -s KILL 200 make assets; }
 set +e
 case "$JOB" in
 train)
