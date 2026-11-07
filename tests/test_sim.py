@@ -1,4 +1,5 @@
 import dataclasses
+import os
 
 import mujoco
 import numpy as np
@@ -247,13 +248,14 @@ def test_power_joints_add_mass_and_raise_the_release_speed(twin):
     )
 
 
+needs_gl = pytest.mark.skipif(not os.environ.get("MUJOCO_GL"), reason="set MUJOCO_GL=osmesa")
+
+
+@needs_gl
 def test_a_marker_renders_where_the_camera_projection_says(twin):
     """The mast camera's image agrees with the pinhole maths to half a pixel."""
-    import os
-
     from darts.camera import project
 
-    os.environ.setdefault("MUJOCO_GL", "osmesa")
     dart = dataclasses.replace(twin.dart, length_m=0.02, radius_m=0.03)  # a near-sphere marker
     t = dataclasses.replace(twin, dart=dart)
     sim = ThrowSim(t)
@@ -276,16 +278,14 @@ def test_a_marker_renders_where_the_camera_projection_says(twin):
     assert (cols.mean() + 0.5, rows.mean() + 0.5) == pytest.approx((u, v), abs=0.5)
 
 
+@needs_gl
 def test_a_mast_behind_the_arm_fails_the_visibility_check_and_the_default_mast_mostly_passes(twin):
     """A camera behind the arm loses the board; the raised side mast sees nearly all of it."""
-    import os
-
     from darts.env import DartThrowEnv
     from darts.interface import decode_action
     from darts.policies import hand_tuned_policy
     from darts.visibility import board_visibility
 
-    os.environ.setdefault("MUJOCO_GL", "osmesa")
     env = DartThrowEnv(twin)
     env.reset(seed=10_000)
     params, _ = decode_action(hand_tuned_policy(env.state(), np.random.default_rng(0)))
