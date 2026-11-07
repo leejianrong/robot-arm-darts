@@ -150,6 +150,12 @@ Reading:
 
 Next: make the search objective robust (average the cost over release-time jitter and aero variants, and penalise tail-first or very fast spin releases) and re-run these four cases. Until then no actuator is confirmed.
 
+## Decision (2026-11-07)
+
+- `twin.yaml` stays at the working setup: board 0.5 m, stock servos, `power` off. It is the only setup with a robust throw (sticks 100% across the aero guesses, base-throw map in `docs/baselines/basemap.json`).
+- The planned 2.37 m actuator is the CubeMars AK60-6 (9 N.m, 33.5 rad/s) on shoulder_lift and elbow_flex, stock servos elsewhere. It is a design target only: no 2.37 m throw has been shown reliable (20 to 56% sticks across variants), and the listing figures are unchecked against datasheets.
+- Switching `twin.yaml` to 2.37 m waits for a robust search (average the cost over release jitter and aero variants, penalise tail-first and very fast spin releases) that finds a throw sticking in at least 80% of variants. Tracked as a Pandan card.
+
 ## Sanity check against human throwers
 
 Sources were thin. Joint-speed numbers for dart throwers were not in the search results (the full texts of Nasu et al. 2014, PLoS ONE, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6797117/ and the JHSE joint-kinematics paper are the places to look).
