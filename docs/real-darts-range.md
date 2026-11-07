@@ -55,9 +55,21 @@ Scripted reach search at 2.37 m (differential evolution over a planar three-join
 | 11 rad/s | 6 N.m | 0.07 m | 33 deg | yes |
 | 11 rad/s | 8 N.m | 0.01 m | 23 deg | yes |
 
+Narrowing run at 7.85 rad/s (the STS3250's no-load speed), same method, seed 1:
+
+| Torque | Best miss | Arrival | Hits board |
+|---|---|---|---|
+| 4.5 N.m | 0.27 m | 40 deg | no |
+| 4.9 N.m | 0.06 m | 29 deg | yes |
+| 5.2 N.m | 0.04 m | 26 deg | yes |
+| 5.5 N.m | 0.04 m | 39 deg | yes |
+| 5.8 N.m | 0.02 m | 33 deg | yes |
+
+The threshold is between 4.5 and 4.9 N.m at 7.85 rad/s. Margin is thin: 4.9 N.m (the STS3250's listed stall torque) only just reaches, from one seed, with flat torque that real servos do not deliver at speed.
+
 Reading:
 - Torque decides it. Between 4 and 6 N.m the board goes from out of reach to reachable; speed above 7 rad/s adds almost nothing.
-- Requirement for 2.37 m: **about 6 N.m (61 kg.cm) of torque and about 7 rad/s (67 rpm)**. The threshold lies between 4 and 6 N.m and has not been narrowed.
+- Requirement for 2.37 m: **at least 4.9 N.m (50 kg.cm) of delivered torque at about 7 to 8 rad/s (67 to 75 rpm); about 6 N.m (61 kg.cm) for margin**. The threshold lies between 4.5 and 4.9 N.m at 7.85 rad/s.
 - The 6 N.m hits are rough: one cell's best throw is a 58 deg lob. A finer search and the base-throw map come after a servo is chosen.
 - The sim uses a flat torque limit at every speed. Real servo torque falls as speed rises, so a real part needs more than 6 N.m of stall torque to deliver it at 7 rad/s.
 
@@ -70,7 +82,7 @@ Figures come from retailer listings, not datasheets; check them before they go i
 | STS3215 7.4 V (SO-101 stock) | 0.192 s / 60 deg = 52 rpm = 5.4 rad/s (twin uses 4.5) | about 19.5 kg.cm = 1.9 N.m (twin: 2.94 from the Menagerie model) | too weak |
 | STS3215 12 V "C018", 1/345 gear | 0.222 s / 60 deg = 45 rpm = 4.7 rad/s | 30 kg.cm = 2.9 N.m | not faster, same torque class: too weak |
 | ST3215-HS 12 V "106 RPM" | 106 rpm = 11.1 rad/s | 20 kg.cm = 1.96 N.m | faster but weaker: does not help |
-| STS3250 12 V "C002", 1/345 gear | 0.133 s / 60 deg = 75 rpm = 7.85 rad/s | 50 kg.cm = 4.9 N.m | speed fits; torque sits between the 4 N.m that fails and the 6 N.m that works: borderline |
+| STS3250 12 V "C002", 1/345 gear | 0.133 s / 60 deg = 75 rpm = 7.85 rad/s | 50 kg.cm = 4.9 N.m | speed fits; 4.9 N.m is just above the 4.5 N.m that fails, with no margin once torque falls with speed: borderline, needs the torque-speed model |
 | Dynamixel XM430-W350 | 46 rpm = 4.8 rad/s | 4.8 N.m (single reseller) | borderline torque, slow |
 
 Corrections: `docs/v1-feasibility.md` once said a 12 V STS3215 reaches about 7 rad/s. It does not; the 12 V part is the high-torque variant. The first version of this page also named the HS part as the likely drop-in; the sweep shows speed is not what is missing.
@@ -79,7 +91,7 @@ Conversions: rpm x 2 pi / 60 = rad/s; kg.cm x 0.0981 = N.m.
 
 ## Open items
 
-- Narrow the torque threshold: run 4.5, 5 and 5.5 N.m at 7 to 8 rad/s, and with the STS3250's own numbers (4.9 N.m, 7.85 rad/s).
+- Repeat the narrowing run with more seeds; one seed decides the 4.5 to 4.9 N.m edge.
 - Model torque falling with speed (servo torque-speed curve), mass of the bigger servos (the STS3250 is heavier and larger than the STS3215, so the arm links and inertia change), and joint gear backlash.
 - Drag, grip creep (the dart slips out after 0.45 s) and the arrival margin are guesses.
 - Voltage: 12 V parts need a 12 V supply, which the stock 7.4 V SO-101 kit does not have.
