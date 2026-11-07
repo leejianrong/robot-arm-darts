@@ -15,7 +15,7 @@ Findings
 
 - Forward release speed tops out near **3.2 m/s**. It is capped by the servo velocity limit: each joint's tip speed is angular rate times reach, and the three add up to about 3.2 m/s only when everything lines up. Faster throws (up to 4.8 m/s) exist, but they all point downward.
 - Four independent seeds converged on the same throw, which supports reading this as the physical optimum and not a search failure.
-- **1.5 m and 1.2 m are out of reach.** 1.0 m works but with almost no headroom: the best throw misses the centre by 9 cm, so hitting a specific segment (the plan's ≤3 cm median target, Q13) is not demonstrated. Q13 may need a shorter range or a faster servo (the 12 V STS3215 is not faster: it is the high-torque variant at about 4.7 rad/s; see `docs/real-darts-range.md`).
+- **1.5 m and 1.2 m are out of reach.** 1.0 m works but with almost no headroom: the best throw misses the centre by 9 cm, so hitting a specific segment (the plan's ≤3 cm median target, Q13) is not demonstrated. Q13 may need a shorter range or a faster servo (see `docs/real-darts-range.md`: torque, not speed, is the limit).
 
 Sanity checks that shaped the result
 
