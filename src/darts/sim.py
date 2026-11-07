@@ -8,6 +8,7 @@ import mujoco
 import numpy as np
 
 from darts.aero import aero_wrench
+from darts import camera
 from darts.board import board_texture, score_tip
 from darts.room import add_room
 from darts.twin import Twin
@@ -89,6 +90,16 @@ def build_model(twin: Twin, visual: bool = False) -> mujoco.MjModel:
             pos=[twin.board.distance_m - 0.0005, 0, twin.board.centre_height_m],
             size=[0.0005, twin.board.radius_m, twin.board.radius_m], contype=0, conaffinity=0,
         )  # fmt: skip
+    cam_pos, cam_axes = camera.pose(twin)
+    spec.worldbody.add_camera(
+        name="board_cam", pos=cam_pos.tolist(), fovy=twin.camera.fovy_deg,
+        xyaxes=[*cam_axes[:, 0], *cam_axes[:, 1]],
+    )  # fmt: skip
+    spec.worldbody.add_geom(  # the mast: for looks only, so it never changes a throw
+        name="camera_mast", type=mujoco.mjtGeom.mjGEOM_BOX,
+        pos=[cam_pos[0], cam_pos[1], cam_pos[2] / 2], size=[0.015, 0.015, cam_pos[2] / 2],
+        rgba=[0.25, 0.25, 0.28, 1], contype=0, conaffinity=0,
+    )  # fmt: skip
     dart = spec.worldbody.add_body(name="dart")
     dart.add_freejoint()
     half = twin.dart.length_m / 2
