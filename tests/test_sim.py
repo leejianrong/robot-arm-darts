@@ -277,7 +277,7 @@ def test_a_marker_renders_where_the_camera_projection_says(twin):
 
 
 def test_a_mast_behind_the_arm_fails_the_visibility_check_and_the_default_mast_mostly_passes(twin):
-    """The arm hides the board from a camera behind it; the raised side mast sees nearly all of it."""
+    """A camera behind the arm loses the board; the raised side mast sees nearly all of it."""
     import os
 
     from darts.env import DartThrowEnv

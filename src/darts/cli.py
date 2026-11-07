@@ -164,7 +164,8 @@ def _visibility(args: argparse.Namespace) -> int:
     low = min(worst)
     ok = low[0] >= MIN_VISIBLE
     print(
-        f"worst: {low[0]:.1%} (seed {low[1]}, frame {low[2]}); {'PASS' if ok else 'FAIL'} at {MIN_VISIBLE:.0%}"
+        f"worst: {low[0]:.1%} (seed {low[1]}, frame {low[2]}); "
+        f"{'PASS' if ok else 'FAIL'} at {MIN_VISIBLE:.0%}"
     )
     return 0 if ok else 1
 
