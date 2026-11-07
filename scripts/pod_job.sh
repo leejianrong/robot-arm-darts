@@ -76,6 +76,13 @@ train)
 basemap)
   step smoke 600 uv run darts basemap --targets 4 --budget 8 --rounds 1 --workers 2 --out "$WORK/smoke" || true
   step basemap 5400 uv run darts basemap --targets "${BASEMAP_TARGETS:-80}" --budget "${BASEMAP_BUDGET:-4000}" --rounds 2 --workers "$NENVS" --seed "$SEED" --max-seconds 4500 --out "$RUN" ;;
+render)  # which GL backend works on this pod, and does it match the laptop? see scripts/gl_check.py
+  (apt-get install -y -q libosmesa6 libegl1 libgl1 libglu1-mesa >/dev/null 2>&1 || echo "apt install failed")
+  for gl in egl osmesa; do
+    echo "RESULT $(MUJOCO_GL=$gl timeout 300 uv run python scripts/gl_check.py 2>&1 | tail -1 | cut -c1-400)"
+  done
+  echo "RESULT nvidia-smi: $(nvidia-smi -L 2>&1 | head -1)"
+  step clip 900 env MUJOCO_GL=osmesa uv run darts replay --policy hand --seed 3 --out "$RUN/clip.mp4" ;;
 reach)  # what servo does a board at REACH_DIST need? one scripted search per speed x torque
   pids=""
   for set in $REACH_POWER_SETS; do  # T:W:shoulder_kg:elbow_kg on shoulder_lift and elbow_flex, stock servo elsewhere
