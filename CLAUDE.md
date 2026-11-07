@@ -4,7 +4,7 @@ MuJoCo digital twin of an SO-101 arm that learns to throw a 10 g dart at a regul
 
 ## Status
 
-Trust the code over the docs where they disagree, then fix the docs. Built through V4 minus a trained policy. The board is at 0.5 m: the cross grip (wrist roll 90°) at the 4.5 rad/s servo limit reaches no further (`docs/v1-feasibility.md`). Training is on hold until throws are believable and robust; run `darts robust` before trusting any hit.
+Trust the code over the docs where they disagree, then fix the docs. Built through V4 minus a trained policy. The board is at 0.5 m: the cross grip (wrist roll 90°) at the 4.5 rad/s servo limit reaches no further (`docs/v1-feasibility.md`). Training is on hold until throws are believable and robust; run `darts robust` before trusting any hit. The 2.37 m range is a design target, not the setup: see `docs/real-darts-range.md` (decision section) before changing `board.distance_m` or the `power` section.
 
 ## Commands
 
