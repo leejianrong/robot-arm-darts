@@ -75,17 +75,17 @@ train)
 basemap)
   step smoke 600 uv run darts basemap --targets 4 --budget 8 --rounds 1 --workers 2 --out "$WORK/smoke" || true
   step basemap 5400 uv run darts basemap --targets "${BASEMAP_TARGETS:-80}" --budget "${BASEMAP_BUDGET:-4000}" --rounds 2 --workers "$NENVS" --seed "$SEED" --max-seconds 4500 --out "$RUN" ;;
-reach)  # how fast must the joints be to hit a board at REACH_DIST? one scripted search per speed
+reach)  # what servo does a board at REACH_DIST need? one scripted search per speed x torque
   pids=""
-  for v in $REACH_SPEEDS; do
+  for v in $REACH_SPEEDS; do for q in $REACH_TORQUES; do
     uv run python -c "
 import yaml; t = yaml.safe_load(open('twin.yaml'))
-t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v
-yaml.safe_dump(t, open('$WORK/twin_$v.yaml', 'w'))"
-    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 --twin "$WORK/twin_$v.yaml" --out "$RUN/v$v" > "$WORK/reach_$v.log" 2>&1
-     echo "RESULT speed=$v rad/s dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_$v.log" | tr '\n' ' ')") &
+t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v; t['servo']['torque_limit_nm'] = $q
+yaml.safe_dump(t, open('$WORK/twin_${v}_$q.yaml', 'w'))"
+    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 --twin "$WORK/twin_${v}_$q.yaml" --out "$RUN/v${v}_q$q" > "$WORK/reach_${v}_$q.log" 2>&1
+     echo "RESULT speed=$v rad/s torque=$q N.m dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_${v}_$q.log" | tr '\n' ' ')") &
     pids="$pids $!"
-  done
+  done; done
   stage reach; wait $pids ;;
 esac
 echo "$JOB exit code $?"
