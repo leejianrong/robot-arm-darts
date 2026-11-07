@@ -82,6 +82,7 @@ reach)  # what servo does a board at REACH_DIST need? one scripted search per sp
     uv run python -c "
 import yaml; t = yaml.safe_load(open('twin.yaml'))
 t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v; t['servo']['torque_limit_nm'] = $q
+if '$REACH_DERATE' == '1': t['servo']['no_load_speed_rad_s'] = $v
 yaml.safe_dump(t, open('$WORK/twin_${v}_$q.yaml', 'w'))"
     (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 --twin "$WORK/twin_${v}_$q.yaml" --out "$RUN/v${v}_q$q" > "$WORK/reach_${v}_$q.log" 2>&1
      echo "RESULT speed=$v rad/s torque=$q N.m dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_${v}_$q.log" | tr '\n' ' ')") &
