@@ -73,29 +73,50 @@ Reading:
 - The 6 N.m hits are rough: one cell's best throw is a 58 deg lob. A finer search and the base-throw map come after a servo is chosen.
 - The sim uses a flat torque limit at every speed. Real servo torque falls as speed rises, so a real part needs more than 6 N.m of stall torque to deliver it at 7 rad/s.
 
+## With torque that falls as speed rises (the realistic servo)
+
+A DC servo's torque falls roughly linearly from its stall torque T0 at standstill to zero at its no-load speed w0. The sim now models this (`servo.no_load_speed_rad_s` in `twin.yaml`, 0 keeps the flat torque of the tables above; every arm joint gets the same curve). Same 2.37 m reach search, `JOB=reach` with `REACH_DERATE=1`, seed 1. Peak mechanical power per joint is T0 x w0 / 4.
+
+| No-load speed w0 | Stall torque T0 | Peak power | Best miss | Hits board |
+|---|---|---|---|---|
+| 7.85 rad/s | 4.9 N.m | 9.6 W | none reaches | no |
+| 7.85 rad/s | 6 N.m | 11.8 W | 1.69 m | no |
+| 7.85 rad/s | 8 N.m | 15.7 W | 1.05 m | no |
+| 7.85 rad/s | 10 N.m | 19.6 W | 0.64 m | no |
+| 12 rad/s | 6 N.m | 18 W | 0.84 m | no |
+| 12 rad/s | 8 N.m | 24 W | 0.17 m | edge of the scoring radius |
+| 12 rad/s | 10 N.m | 30 W | 0.11 m | yes |
+| 16 rad/s | 6 N.m | 24 W | 0.46 m | no |
+| 16 rad/s | 8 N.m | 32 W | 0.03 m | yes |
+| 16 rad/s | 10 N.m | 40 W | 0.01 m | yes |
+
+Reading: both numbers matter. Hitting 2.37 m needs about **12 rad/s (115 rpm) or more with 8 to 10 N.m (82 to 102 kg.cm) of stall torque, or 16 rad/s with 8 N.m: roughly 25 to 30 W of peak power per joint.** The flat-torque result above (4.9 N.m is enough) was too optimistic. Even 10 N.m at 7.85 rad/s does not reach the board.
+
 ## Real servo candidates
 
 Figures come from retailer listings, not datasheets; check them before they go in `twin.yaml`.
 
-| Servo | No-load speed | Stall torque | Verdict |
-|---|---|---|---|
-| STS3215 7.4 V (SO-101 stock) | 0.192 s / 60 deg = 52 rpm = 5.4 rad/s (twin uses 4.5) | about 19.5 kg.cm = 1.9 N.m (twin: 2.94 from the Menagerie model) | too weak |
-| STS3215 12 V "C018", 1/345 gear | 0.222 s / 60 deg = 45 rpm = 4.7 rad/s | 30 kg.cm = 2.9 N.m | not faster, same torque class: too weak |
-| ST3215-HS 12 V "106 RPM" | 106 rpm = 11.1 rad/s | 20 kg.cm = 1.96 N.m | faster but weaker: does not help |
-| STS3250 12 V "C002", 1/345 gear | 0.133 s / 60 deg = 75 rpm = 7.85 rad/s | 50 kg.cm = 4.9 N.m | speed fits; 4.9 N.m is just above the 4.5 N.m that fails, with no margin once torque falls with speed: borderline, needs the torque-speed model |
-| Dynamixel XM430-W350 | 46 rpm = 4.8 rad/s | 4.8 N.m (single reseller) | borderline torque, slow |
+| Servo | No-load speed | Stall torque | Peak power | Verdict |
+|---|---|---|---|---|
+| STS3215 7.4 V (SO-101 stock) | 5.4 rad/s (twin uses 4.5) | about 1.9 N.m (twin: 2.94 from the Menagerie model) | about 2.6 W | far too weak |
+| STS3215 12 V "C018" | 4.7 rad/s | 2.9 N.m | 3.4 W | too weak |
+| ST3215-HS 12 V | 11.1 rad/s | 1.96 N.m | 5.4 W | fast but weak |
+| STS3250 12 V "C002" | 7.85 rad/s | 4.9 N.m | 9.6 W | fails even at 10 N.m and this speed; about a third of the power needed |
+| Dynamixel XM430-W350 | 4.8 rad/s | 4.8 N.m | 5.8 W | too slow and weak |
 
-Corrections: `docs/v1-feasibility.md` once said a 12 V STS3215 reaches about 7 rad/s. It does not; the 12 V part is the high-torque variant. The first version of this page also named the HS part as the likely drop-in; the sweep shows speed is not what is missing.
+Nothing in the hobby smart-servo class listed here comes close. The need is about 25 to 30 W of peak power at 12 to 16 rad/s, which points at brushless actuators (quasi-direct-drive or planetary-geared BLDC modules) on the shoulder and elbow. Not yet researched: which real ones fit.
+
+Corrections: `docs/v1-feasibility.md` once said a 12 V STS3215 reaches about 7 rad/s. It does not; the 12 V part is the high-torque variant. An earlier version of this page also named the HS part and then the STS3250 as candidates; the flat-torque sweeps that suggested them ignored torque loss with speed.
 
 Conversions: rpm x 2 pi / 60 = rad/s; kg.cm x 0.0981 = N.m.
 
 ## Open items
 
-- Repeat the narrowing run with more seeds; one seed decides the 4.5 to 4.9 N.m edge.
-- Model torque falling with speed (servo torque-speed curve), mass of the bigger servos (the STS3250 is heavier and larger than the STS3215, so the arm links and inertia change), and joint gear backlash.
+- Shortlist real BLDC actuators with datasheets (torque, speed, mass, price, control interface) that give 8 to 10 N.m at 12 to 16 rad/s; fit their torque-speed curve instead of the straight line.
+- Mass and inertia of the bigger actuators (the sim still uses the stock SO-101 links), joint backlash, and which joints really need the big actuator (probably shoulder and elbow; the wrist and gripper may stay small).
+- Repeat the 12 rad/s, 8 N.m edge with more seeds; one seed decides it.
 - Drag, grip creep (the dart slips out after 0.45 s) and the arrival margin are guesses.
-- Voltage: 12 V parts need a 12 V supply, which the stock 7.4 V SO-101 kit does not have.
-- Decide the arm: SO-101 with bigger servos on the shoulder and elbow (the joints that do most of the work), or a different arm.
+- Decide the arm: SO-101 with bigger actuators on two joints, or a different arm.
 
 Reproduce the table:
 
