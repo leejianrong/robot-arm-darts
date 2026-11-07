@@ -26,7 +26,7 @@ export RP_MAX_HOURLY_USD="${RP_MAX_HOURLY_USD:?set RP_MAX_HOURLY_USD (the most y
 export RP_MAX_LIFETIME_SECS="${RP_MAX_LIFETIME_SECS:-7200}"
 export RP_STATE_FILE="runs/.rp-state-$RUN_ID"
 job="$(base64 -w0 scripts/pod_job.sh)"
-export RP_JOB_CMD="export REF=$REF RUN_ID=$RUN_ID STEPS=$STEPS SEED=$SEED EVAL_EVERY=$EVAL_EVERY JOB=$JOB BASEMAP_TARGETS=$BASEMAP_TARGETS BASEMAP_BUDGET=$BASEMAP_BUDGET REACH_DIST=$REACH_DIST REACH_SPEEDS REACH_TORQUES='$REACH_SPEEDS' REACH_TORQUES='$REACH_TORQUES' SCALE=$SCALE N_STEPS=$N_STEPS BATCH_SIZE=$BATCH_SIZE NENVS=$NENVS REPO=$REPO OMP_NUM_THREADS=1; echo $job | base64 -d | bash"
+export RP_JOB_CMD="export REF=$REF RUN_ID=$RUN_ID STEPS=$STEPS SEED=$SEED EVAL_EVERY=$EVAL_EVERY JOB=$JOB BASEMAP_TARGETS=$BASEMAP_TARGETS BASEMAP_BUDGET=$BASEMAP_BUDGET REACH_DIST=$REACH_DIST REACH_SPEEDS='$REACH_SPEEDS' REACH_TORQUES='$REACH_TORQUES' SCALE=$SCALE N_STEPS=$N_STEPS BATCH_SIZE=$BATCH_SIZE NENVS=$NENVS REPO=$REPO OMP_NUM_THREADS=1; echo $job | base64 -d | bash"
 
 WATCH="runs/$RUN_ID.watch.log"  # raw snapshots of the pod log, kept even if the pod vanishes
 mkdir -p runs
@@ -47,7 +47,7 @@ done
     sleep 60
     snap="$(./scripts/rp logs --tail 200 2>&1 || true)"
     printf '%s\n--- %s\n' "$snap" "$(date -u +%FT%TZ)" >> "$WATCH"
-    echo "$snap" | grep -E "STAGE|HEARTBEAT|WARN|ERROR|EVAL|ABORT|PROGRESS|RESULT" | tail -3
+    echo "$snap" | grep -E "STAGE|HEARTBEAT|WARN|ERROR|EVAL|ABORT|PROGRESS|RESULT|bash: line" | tail -3
   done ) &
 WATCHER=$!
 ./scripts/rp relay-get "runs/.incoming-$RUN_ID"
