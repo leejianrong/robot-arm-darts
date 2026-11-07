@@ -139,6 +139,36 @@ def _replay(args: argparse.Namespace) -> int:
     return 0
 
 
+def _visibility(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.env import DartThrowEnv
+    from darts.interface import decode_action
+    from darts.sim import ThrowSim, build_model
+    from darts.visibility import MIN_VISIBLE, board_visibility
+
+    twin = load_twin(args.twin)
+    env, policy = DartThrowEnv(twin), _policy(args.policy)
+    sim = ThrowSim(twin, build_model(twin, visual=True))
+    worst = []
+    for seed in range(args.seed, args.seed + args.n):
+        env.reset(seed=seed)
+        params, _ = decode_action(policy(env.state(), np.random.default_rng(seed)))
+        r = board_visibility(twin, params, sim)
+        worst.append((r["min"], seed, r["worst_frame"]))
+        print(
+            f"seed {seed}: board at least {r['min']:.1%} visible over {r['frames']} frames",
+            flush=True,
+        )
+    low = min(worst)
+    ok = low[0] >= MIN_VISIBLE
+    print(
+        f"worst: {low[0]:.1%} (seed {low[1]}, frame {low[2]}); {'PASS' if ok else 'FAIL'} at {MIN_VISIBLE:.0%}"
+    )
+    return 0 if ok else 1
+
+
 def _robust(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
@@ -205,6 +235,13 @@ def main(argv: list[str] | None = None) -> int:
         help="aim offset from the board centre, m",
     )
     ro.add_argument("--twin", default="twin.yaml")
+    vi = sub.add_parser(
+        "visibility", help="board visibility from the mast camera over seeded throws"
+    )
+    vi.add_argument("--policy", default="hand", help="random, hand, or a basemap.json")
+    vi.add_argument("--n", type=int, default=100)
+    vi.add_argument("--seed", type=int, default=0)
+    vi.add_argument("--twin", default="twin.yaml")
     rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
     rp.add_argument("--policy", default="hand", help="random, hand, or a basemap.json")
     rp.add_argument("--seed", type=int, default=0)
@@ -218,5 +255,6 @@ def main(argv: list[str] | None = None) -> int:
         "train": _train,
         "basemap": _basemap,
         "robust": _robust,
+        "visibility": _visibility,
         "replay": _replay,
     }[args.cmd](args)
