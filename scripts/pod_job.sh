@@ -78,7 +78,18 @@ basemap)
   step basemap 5400 uv run darts basemap --targets "${BASEMAP_TARGETS:-80}" --budget "${BASEMAP_BUDGET:-4000}" --rounds 2 --workers "$NENVS" --seed "$SEED" --max-seconds 4500 --out "$RUN" ;;
 reach)  # what servo does a board at REACH_DIST need? one scripted search per speed x torque
   pids=""
-  for v in $REACH_SPEEDS; do for q in $REACH_TORQUES; do
+  for set in $REACH_POWER_SETS; do  # T:W:shoulder_kg:elbow_kg on shoulder_lift and elbow_flex, stock servo elsewhere
+    IFS=: read -r T W MS ME <<< "$set"; tag=$(echo "$set" | tr ':' '_')
+    uv run python -c "
+import yaml; t = yaml.safe_load(open('twin.yaml'))
+t['board']['distance_m'] = $REACH_DIST
+t['power'] = dict(torque_limit_nm=$T, no_load_speed_rad_s=$W, velocity_limit_rad_s=$W, shoulder_mass_kg=$MS, elbow_mass_kg=$ME)
+yaml.safe_dump(t, open('$WORK/twin_$tag.yaml', 'w'))"
+    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 --twin "$WORK/twin_$tag.yaml" --out "$RUN/p$tag" > "$WORK/reach_$tag.log" 2>&1
+     echo "RESULT power=$set (T N.m:no-load rad/s:shoulder kg:elbow kg) dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_$tag.log" | tr '\n' ' ')") &
+    pids="$pids $!"
+  done
+  for v in ${REACH_SPEEDS:-}; do for q in $REACH_TORQUES; do
     uv run python -c "
 import yaml; t = yaml.safe_load(open('twin.yaml'))
 t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v; t['servo']['torque_limit_nm'] = $q

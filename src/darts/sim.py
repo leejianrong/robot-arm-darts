@@ -14,6 +14,7 @@ from darts.twin import Twin
 
 ROOT = Path(__file__).resolve().parents[2]
 SCENE = ROOT / "assets" / "menagerie" / "robotstudio_so101" / "scene.xml"
+POWER_JOINTS = ("shoulder_lift", "elbow_flex")
 ARM_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
 THROW_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex")
 # Dart pose in the gripper frame: pinched at the fingertips against the fixed jaw plate, barrel
@@ -45,6 +46,14 @@ def _hand_collision_geoms(model: mujoco.MjModel) -> set[int]:
         if int(model.geom_bodyid[i]) in bodies
         and (model.geom_contype[i] or model.geom_conaffinity[i])
     }
+
+
+def servo_limits(twin: Twin, joint: str) -> tuple[float, float, float]:
+    """(torque, no-load speed, command slew) rad/s for a joint: the big actuator or the stock servo."""
+    sv, pw = twin.servo, twin.power
+    if joint in POWER_JOINTS and pw.torque_limit_nm > 0:
+        return pw.torque_limit_nm, pw.no_load_speed_rad_s, pw.velocity_limit_rad_s
+    return sv.torque_limit_nm, sv.no_load_speed_rad_s, sv.velocity_limit_rad_s
 
 
 def build_model(twin: Twin, visual: bool = False) -> mujoco.MjModel:
@@ -99,6 +108,16 @@ def build_model(twin: Twin, visual: bool = False) -> mujoco.MjModel:
     model.actuator_biasprm[:, 1] = -twin.servo.kp
     model.actuator_biasprm[:, 2] = -twin.servo.kv
     model.actuator_forcerange[:] = (-twin.servo.torque_limit_nm, twin.servo.torque_limit_nm)
+    for j in POWER_JOINTS:
+        t = servo_limits(twin, j)[0]
+        model.actuator_forcerange[model.actuator(j).id] = (-t, t)
+    for body, extra in (
+        ("shoulder", twin.power.shoulder_mass_kg),
+        ("upper_arm", twin.power.elbow_mass_kg),
+    ):
+        b = model.body(body).id  # an actuator's mass: heavier link, inertia scaled to match
+        model.body_inertia[b] *= (model.body_mass[b] + extra) / model.body_mass[b]
+        model.body_mass[b] += extra
     # Contact numerics, tuned so a pinched dart neither creeps at rest (0.15 mm/s) nor slips in a
     # hard swing; the Menagerie defaults let it creep out in 0.5 s. They are solver settings, not
     # physical parameters, so they stay out of twin.yaml.
@@ -284,7 +303,7 @@ class ThrowSim:
     def _slew(self, name: str, target: float) -> None:
         """Rate-limit the position command to the servo velocity limit."""
         a = self._aid[name]
-        step = self.twin.servo.velocity_limit_rad_s * self.model.opt.timestep
+        step = servo_limits(self.twin, name)[2] * self.model.opt.timestep
         cur = self.data.ctrl[a]
         self.data.ctrl[a] = cur + float(np.clip(target - cur, -step, step))
 
@@ -294,13 +313,14 @@ class ThrowSim:
 
     def _derate_torque(self) -> None:
         """Torque falls linearly with joint speed, to zero at the servo's no-load speed."""
-        m, d, sv = self.model, self.data, self.twin.servo
-        if sv.no_load_speed_rad_s <= 0:
-            return
+        m, d = self.model, self.data
         for n in ARM_JOINTS:
+            torque, no_load, _ = servo_limits(self.twin, n)
+            if no_load <= 0:
+                continue
             a = self._aid[n]
             speed = abs(d.qvel[m.jnt_dofadr[m.actuator_trnid[a, 0]]])
-            limit = sv.torque_limit_nm * max(0.0, 1.0 - speed / sv.no_load_speed_rad_s)
+            limit = torque * max(0.0, 1.0 - speed / no_load)
             m.actuator_forcerange[a] = (-limit, limit)
 
     def _command(self, p: ThrowParams, t: float) -> None:

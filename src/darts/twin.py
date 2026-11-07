@@ -29,6 +29,17 @@ class Servo:
 
 
 @dataclass(frozen=True)
+class Power:
+    """Bigger actuators on shoulder_lift and elbow_flex; torque_limit_nm 0 keeps the stock servo."""
+
+    torque_limit_nm: float
+    no_load_speed_rad_s: float  # torque falls linearly to zero here; 0 keeps it flat
+    velocity_limit_rad_s: float
+    shoulder_mass_kg: float  # actuator mass added to the shoulder body (does not swing)
+    elbow_mass_kg: float  # added to the upper arm (swings with the shoulder lift)
+
+
+@dataclass(frozen=True)
 class Dart:
     mass_kg: float
     length_m: float
@@ -68,6 +79,7 @@ class Twin:
     schema_version: int
     sim: Sim
     servo: Servo
+    power: Power
     dart: Dart
     aero: Aero
     release: Release
@@ -78,6 +90,7 @@ class Twin:
 _SECTIONS: dict[str, type] = {
     "sim": Sim,
     "servo": Servo,
+    "power": Power,
     "dart": Dart,
     "aero": Aero,
     "release": Release,

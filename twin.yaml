@@ -9,6 +9,12 @@ servo:                       # STS3215 at ~7.4 V; Menagerie gains
   torque_limit_nm: 2.94      # stall torque, per Menagerie forcerange
   no_load_speed_rad_s: 0     # 0 = torque flat at every speed; real servos lose torque as they speed up (datasheet no-load speed)
   velocity_limit_rad_s: 4.5  # datasheet 4.71 (0.222 s per 60 deg) minus buffer; measure on hardware
+power:                       # bigger actuators on shoulder_lift and elbow_flex (docs/real-darts-range.md)
+  torque_limit_nm: 0         # 0 = off: those joints use the servo above
+  no_load_speed_rad_s: 0
+  velocity_limit_rad_s: 0
+  shoulder_mass_kg: 0        # actuator mass added to the shoulder body
+  elbow_mass_kg: 0           # actuator mass added to the upper arm
 dart:
   mass_kg: 0.010
   length_m: 0.12
