@@ -64,7 +64,8 @@ step clone 300 git clone -q "$REPO" "$WORK/src"
 cd "$WORK/src" && git checkout -q "$REF"
 JOB=${JOB:-train}
 step install 900 uv sync -q $([ "$JOB" = train ] && echo --extra train)
-step assets 600 make assets
+export GIT_TERMINAL_PROMPT=0  # a hung credential prompt once sat in this step for 16 minutes
+step assets 240 timeout -s KILL 200 make assets || { rm -rf assets/menagerie; step assets_retry 240 timeout -s KILL 200 make assets; }
 set +e
 case "$JOB" in
 train)
@@ -75,6 +76,18 @@ train)
 basemap)
   step smoke 600 uv run darts basemap --targets 4 --budget 8 --rounds 1 --workers 2 --out "$WORK/smoke" || true
   step basemap 5400 uv run darts basemap --targets "${BASEMAP_TARGETS:-80}" --budget "${BASEMAP_BUDGET:-4000}" --rounds 2 --workers "$NENVS" --seed "$SEED" --max-seconds 4500 --out "$RUN" ;;
+reach)  # what servo does a board at REACH_DIST need? one scripted search per speed x torque
+  pids=""
+  for v in $REACH_SPEEDS; do for q in $REACH_TORQUES; do
+    uv run python -c "
+import yaml; t = yaml.safe_load(open('twin.yaml'))
+t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v; t['servo']['torque_limit_nm'] = $q
+yaml.safe_dump(t, open('$WORK/twin_${v}_$q.yaml', 'w'))"
+    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 --twin "$WORK/twin_${v}_$q.yaml" --out "$RUN/v${v}_q$q" > "$WORK/reach_${v}_$q.log" 2>&1
+     echo "RESULT speed=$v rad/s torque=$q N.m dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_${v}_$q.log" | tr '\n' ' ')") &
+    pids="$pids $!"
+  done; done
+  stage reach; wait $pids ;;
 esac
 echo "$JOB exit code $?"
 set -e
