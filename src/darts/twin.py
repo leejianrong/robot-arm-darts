@@ -75,6 +75,19 @@ class Mount:
 
 
 @dataclass(frozen=True)
+class Camera:
+    """Rigid on a mast beside the arm, looking at the board centre (ADR-0007). x and y are
+    from the base axis, z above the floor."""
+
+    x_m: float
+    y_m: float
+    z_m: float
+    fovy_deg: float
+    width_px: float
+    height_px: float
+
+
+@dataclass(frozen=True)
 class Twin:
     schema_version: int
     sim: Sim
@@ -85,6 +98,7 @@ class Twin:
     release: Release
     board: Board
     mount: Mount
+    camera: Camera
 
 
 _SECTIONS: dict[str, type] = {
@@ -96,6 +110,7 @@ _SECTIONS: dict[str, type] = {
     "release": Release,
     "board": Board,
     "mount": Mount,
+    "camera": Camera,
 }
 
 

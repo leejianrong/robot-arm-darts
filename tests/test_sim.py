@@ -245,3 +245,32 @@ def test_power_joints_add_mass_and_raise_the_release_speed(twin):
     assert build_model(heavy).body_mass[upper] == pytest.approx(
         build_model(twin).body_mass[upper] + 0.4
     )
+
+
+def test_a_marker_renders_where_the_camera_projection_says(twin):
+    """The mast camera's image agrees with the pinhole maths to half a pixel."""
+    import os
+
+    from darts.camera import project
+
+    os.environ.setdefault("MUJOCO_GL", "osmesa")
+    dart = dataclasses.replace(twin.dart, length_m=0.02, radius_m=0.03)  # a near-sphere marker
+    t = dataclasses.replace(twin, dart=dart)
+    sim = ThrowSim(t)
+    point = np.array([0.35, 0.05, 1.75])
+    a = sim._dart_qadr
+    sim.data.qpos[a : a + 3] = point
+    mujoco.mj_forward(sim.model, sim.data)
+    try:
+        renderer = mujoco.Renderer(sim.model, int(t.camera.height_px), int(t.camera.width_px))
+    except Exception as e:  # no GL backend here
+        pytest.skip(f"no GL backend: {e}")
+    renderer.enable_segmentation_rendering()
+    renderer.update_scene(sim.data, camera="board_cam")
+    seg = renderer.render()
+    hit = seg[..., 0] == sim.model.geom("dart_barrel").id
+    renderer.close()
+    assert hit.sum() > 50
+    rows, cols = np.nonzero(hit)
+    u, v = project(t, point)
+    assert (cols.mean() + 0.5, rows.mean() + 0.5) == pytest.approx((u, v), abs=0.5)
