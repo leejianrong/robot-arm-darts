@@ -110,6 +110,27 @@ Corrections: `docs/v1-feasibility.md` once said a 12 V STS3215 reaches about 7 r
 
 Conversions: rpm x 2 pi / 60 = rad/s; kg.cm x 0.0981 = N.m.
 
+## Brushless actuator shortlist (2.37 m)
+
+Need: stall (peak) torque 8 to 10 N.m and no-load speed 12 to 16 rad/s or more on the shoulder and elbow (see the derated sweep). Figures are from retailer and distributor listings and conflict in places; the official datasheets decide before anything is bought or set in `twin.yaml`. Peak power = peak torque x no-load speed / 4. Treating "peak torque" as the stall torque of the sim's straight-line curve is a guess; real drives hold torque flat up to a base speed, so the line is probably conservative.
+
+| Actuator | Peak torque | No-load speed | Peak power | Weight | Listed price | Fit |
+|---|---|---|---|---|---|---|
+| CubeMars AK60-6 V3 (KV80) | 9 N.m | 320 rpm = 33.5 rad/s (at 24 V; 640 rpm quoted for 48 V) | about 75 W | 380 g (one distributor says 1.5 kg, probably packaged) | about $400 to $500 | meets the bar with 3x speed margin; smallest and cheapest |
+| MyActuator RMD-X6-8 | 10 N.m (another listing: 8) | 310 rpm = 32 rad/s (rated speed; no-load higher) | about 80 W | 0.49 to 0.8 kg (listings conflict) | not found | meets the bar; weight unclear |
+| CubeMars AK70-10 KV100 | 24.8 N.m | 240 rpm = 25 rad/s (24 V) | about 155 W | 521 g | about $400 to $500 | well above the bar; more weight and cost than needed |
+| CubeMars AK80-9 KV100 | 18 N.m | 533 rpm = 56 rad/s | about 250 W | 485 g | about $470 to $570 | far above the bar |
+
+Not searched: Unitree actuators, Dynamixel's larger X-series, and ODrive-based DIY builds.
+
+Reading:
+- The brushless class clears the requirement by a wide margin on speed; the AK60-6 and RMD-X6-8 also reach the 8 to 10 N.m stall torque with little to spare, so torque is the number to watch.
+- Costs add up: two big joints is about $800 to $1,000 before a supply, CAN interface and wiring. They run on 24 to 48 V over CAN, not the 6 to 12 V serial bus of the SO-101 servos, so the electronics and the LeRobot interface change.
+- Weight: 0.4 to 0.5 kg sits on the arm. The stock SO-101 links total about 0.5 kg moving mass, so the arm would roughly double in weight. The sim has not seen this yet; the 25 to 30 W estimate assumed the stock links, and more mass needs more torque.
+- Which joints: shoulder_lift and elbow_flex do the swing. A shoulder actuator mounted at the base mostly adds no moving mass; an elbow actuator rides on the upper arm and does.
+
+Next in the spike: model the extra link mass and re-run the 2.37 m search with an AK60-6 (9 N.m, 33.5 rad/s) on the shoulder and elbow only, and the stock servos elsewhere.
+
 ## Sanity check against human throwers
 
 Sources were thin. Joint-speed numbers for dart throwers were not in the search results (the full texts of Nasu et al. 2014, PLoS ONE, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6797117/ and the JHSE joint-kinematics paper are the places to look).
@@ -122,7 +143,7 @@ Conclusion: the numbers make sense. Speed matches a human throw, and the power i
 
 ## Open items
 
-- Shortlist real BLDC actuators with datasheets (torque, speed, mass, price, control interface) that give 8 to 10 N.m at 12 to 16 rad/s; fit their torque-speed curve instead of the straight line.
+- Check the shortlist against official datasheets (the listings conflict) and fit the real torque-speed curve instead of the straight line.
 - Mass and inertia of the bigger actuators (the sim still uses the stock SO-101 links), joint backlash, and which joints really need the big actuator (probably shoulder and elbow; the wrist and gripper may stay small).
 - Repeat the 12 rad/s, 8 N.m edge with more seeds; one seed decides it.
 - Drag, grip creep (the dart slips out after 0.45 s) and the arrival margin are guesses.
