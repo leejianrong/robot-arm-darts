@@ -124,23 +124,33 @@ class SimArm:
         self._targets: dict[str, float] = {}
         self._open = False
         self._t0 = 0.0
+        self._pending: list[tuple[float, str, dict[str, float]]] = []  # (acts at, kind, values)
 
     def prepare(self, start: dict[str, float]) -> None:
         check_targets(start)
         q = tuple(start.get(n, 0.0) for n in THROW_JOINTS)
         self.sim.reset(q, start.get("shoulder_pan", 0.0))  # type: ignore[arg-type]
-        self._targets, self._open = {}, False
+        self._targets, self._open, self._pending = {}, False, []
         self._t0 = self.sim.data.time
 
     def set_targets(self, targets: dict[str, float]) -> None:
-        self._targets |= check_targets(dict(targets))
+        lag = self.sim.twin.servo.latency_s
+        self._pending.append((self.sim.data.time + lag, "targets", check_targets(dict(targets))))
 
     def open_gripper(self) -> None:
-        self._open = True
+        tw = self.sim.twin
+        at = self.sim.data.time + tw.servo.latency_s + tw.release.jaw_delay_s
+        self._pending.append((at, "open", {}))
 
     def wait(self, seconds: float) -> None:
         s = self.sim
         for _ in range(round(seconds / s.model.opt.timestep)):
+            for due in [c for c in self._pending if c[0] <= s.data.time + 1e-9]:
+                self._pending.remove(due)
+                if due[1] == "open":
+                    self._open = True
+                else:
+                    self._targets |= due[2]
             s._derate_torque()
             for n, v in self._targets.items():
                 s._slew(n, v)

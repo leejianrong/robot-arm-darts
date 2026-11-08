@@ -166,6 +166,18 @@ def _game(args: argparse.Namespace) -> int:
     return 0
 
 
+def _sysid(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.arm import read_log
+    from darts.sysid import fit
+
+    result = fit(load_twin(args.twin), [read_log(Path(p)) for p in args.logs])
+    print(json.dumps(result, indent=2, default=float))
+    return 0
+
+
 def _visibility(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
@@ -296,6 +308,9 @@ def main(argv: list[str] | None = None) -> int:
     ga.add_argument("--max-darts", type=int, help="render only the first N darts")
     ga.add_argument("--out", default="runs/game")
     ga.add_argument("--twin", default="twin.yaml")
+    si = sub.add_parser("sysid", help="fit servo gain, latency and jaw delay to arm logs, JSON out")
+    si.add_argument("logs", nargs="+", help="JSON-lines logs written by `darts.arm.write_log`")
+    si.add_argument("--twin", default="twin.yaml")
     es = sub.add_parser("estimate", help="detector error over random board poses, JSON out")
     es.add_argument("--n", type=int, default=100)
     es.add_argument("--seed", type=int, default=0)
@@ -318,5 +333,6 @@ def main(argv: list[str] | None = None) -> int:
         "visibility": _visibility,
         "estimate": _estimate,
         "game": _game,
+        "sysid": _sysid,
         "replay": _replay,
     }[args.cmd](args)

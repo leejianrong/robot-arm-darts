@@ -26,6 +26,7 @@ class Servo:
     torque_limit_nm: float
     velocity_limit_rad_s: float
     no_load_speed_rad_s: float  # torque falls linearly to zero at this speed; 0 keeps it flat
+    latency_s: float  # from a position command to the servo acting on it
 
 
 @dataclass(frozen=True)
@@ -58,6 +59,7 @@ class Release:
     jaw_hold_rad: float
     jaw_open_rad: float
     pad_friction: float
+    jaw_delay_s: float  # extra time the open command takes to act, after the servo latency
 
 
 @dataclass(frozen=True)
@@ -90,7 +92,7 @@ class Camera:
 @dataclass(frozen=True)
 class Randomise:
     """Per-episode training spread: each value is drawn uniformly within +-this fraction of the
-    nominal. Latency and jaw timing are not in the model, so they cannot be randomised yet."""
+    nominal. Latency and jaw delay are 0 until measured (DART-30): not randomised yet."""
 
     servo_gain_frac: float  # kp and kv
     servo_torque_frac: float
