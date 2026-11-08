@@ -34,7 +34,8 @@ MAX_RELEASE_SPEED_M_S = 6.0
 MISALIGN_PENALTY_M = 0.3
 SPIN_PENALTY_M_PER_RAD_S = 0.01
 RELEASE_SPEED_PENALTY_M_PER_M_S = 0.2
-VARIANT_COST_CAP = 3.0  # one failed variant must not drown the others in the average
+VARIANT_COST_CAP = 13.0  # above 10 + any shortfall, so falling short keeps its gradient; only a
+# crashed throw (100) is capped, so one bad variant cannot drown the average
 # (fin, damping, drag multipliers, release-time jitter s): the nominal throw, early and late
 # release, and the two aero corners. A subset of `darts robust`'s 54 so a search stays affordable.
 ROBUST_VARIANTS = (
