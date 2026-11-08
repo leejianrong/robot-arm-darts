@@ -10,6 +10,7 @@ import gymnasium as gym
 import numpy as np
 
 from darts.interface import ACTION_DIM, STATE_DIM, State, decode_action, target_state
+from darts.randomise import sample
 from darts.sim import ThrowResult, ThrowSim
 from darts.sweep import throw_penalty
 from darts.twin import Twin
@@ -52,8 +53,16 @@ class DartThrowEnv(gym.Env):
 
     metadata = {"render_modes": []}
 
-    def __init__(self, twin: Twin, sim: ThrowSim | None = None, noise: ObsNoise | None = None):
+    def __init__(
+        self,
+        twin: Twin,
+        sim: ThrowSim | None = None,
+        noise: ObsNoise | None = None,
+        randomise: bool = False,
+    ):
         self.twin = twin
+        self._nominal = twin
+        self.randomise = randomise
         self.noise = noise or ObsNoise()
         self._obs_now = np.zeros(STATE_DIM)
         self.sim = sim or ThrowSim(twin)
@@ -64,6 +73,9 @@ class DartThrowEnv(gym.Env):
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         super().reset(seed=seed)
+        if self.randomise:  # a fresh arm and dart each episode; same seed, same arm
+            self.twin = sample(self._nominal, self.np_random)
+            self.sim = ThrowSim(self.twin)
         self._seed = seed
         r = self.twin.board.radius_m * np.sqrt(self.np_random.uniform())  # uniform over the disc
         a = self.np_random.uniform(0.0, 2.0 * np.pi)
