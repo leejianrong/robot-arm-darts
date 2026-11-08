@@ -32,10 +32,17 @@ At 0.5 m the hand works within half a metre of the board, so any camera near the
 
 OSMesa is the headless backend: it needs `apt install libosmesa6` and gives the same pixels on the laptop and the pod. EGL needs a GPU pod, which nothing so far calls for (a clip takes about 80 s on OSMesa). If rendering ever becomes the bottleneck, try EGL on a GPU template and re-run `gl_check.py` to compare against this table.
 
-## Board detector (DART-23)
+## Board detector and estimator error (DART-23, DART-24)
 
-`darts.detect.detect_board(rgb, twin)` finds the board in a mast-camera frame and returns its centre and normal in the world frame, or `None` when the board is not fully in view. It thresholds the bright pixels (the cream wedges; the yellow arm is masked out by hue because it touches the board in the image), closes the gaps, keeps the biggest blob whose outline is an ellipse, and solves for the circle whose projection matches that ellipse (`scipy.optimize.least_squares`, started from the ellipse). A first version took the corners of the black square under the board; shadows and wood grooves bled into its mask, so it was dropped.
+`darts.detect.detect_board(rgb, twin)` finds the board in a mast-camera frame and returns its centre and normal in the world frame, or `None`. It keeps pixels that are bright and nearly white (the cream wedges; the yellow arm and orange floor are strongly coloured and drop out), closes the gaps, takes the convex hull of the biggest blob (the wedge tips lie on the double ring, so the hull is the ring), fits an ellipse, and solves for the circle whose projection matches it (`scipy.optimize.least_squares`, started from the ellipse). `None` comes back for no board, a blob touching the frame edge, or an ellipse whose axes are far from the nominal board's. A first version took the corners of the black square under the board; shadows and wood grooves bled into its mask. A brightness-only threshold failed under dim light and merged the board with the yellow arm.
 
-100 random boards (0.45 to 0.60 m away, centre 1.63 to 1.83 m high), camera fixed at the nominal pose, clean renders, error in the board plane: 0 failures, median 1.3 mm, 95th percentile 4.7 mm, worst 8.6 mm. `EDGE_GROWTH` (1.02) was fitted on these renders to cancel a bias, so this is the fit's own data; DART-24 measures it on fresh poses with image noise, blur and lighting changes.
+`darts.estimate.state_from_frame(rgb, twin, y, z)` turns that into the policy's `State` (centre minus the stand height, plus the target offset the game names). `darts estimate --n 100` measures it over random board poses (5 cm closer to 10 cm further, 10 cm up or down, camera fixed at the nominal pose) with each frame degraded by lighting gain 0.7 to 1.3, offset +-15, blur up to 1.5 px and sensor noise up to 4 levels. Errors in the arm base frame, 100 poses, seed 5, 0.5 m board:
 
-`None` comes back for no board, a board cut by the frame edge, or a board partly hidden (the outline stops being an ellipse). It does not yet distinguish those cases.
+| Frames | Failures | Board-plane error median / p95 | Normal error median / p95 | Std of target x, y, z |
+|---|---|---|---|---|
+| clean | 0 | 3.2 mm / 5.5 mm | 0.07 / 0.17 deg | 0.7, 0.7, 1.1 mm |
+| degraded | 0 | 4.9 mm / 13.8 mm | 0.19 / 0.76 deg | 3.8, 4.1, 5.5 mm |
+
+The degraded set (`docs/baselines/estimator_error.json`) is the error model for DART-16 and DART-25. The card's "within 1 cm at 1.5 m for 95%" does not apply at the 0.5 m setup; at 0.5 m the degraded p95 is 1.4 cm, just over a 1 cm bar. The clean error has a steady 3 mm offset (a bias, not noise).
+
+Limits: a board partly hidden by the arm is not always rejected, because the hull of the visible wedge tips can still fit the full ellipse, and the board's normal is only checked loosely. Lighting changes here are brightness and offset only, no colour shift or shadows.
