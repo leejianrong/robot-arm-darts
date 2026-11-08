@@ -150,6 +150,25 @@ Reading:
 
 Next: make the search objective robust (average the cost over release-time jitter and aero variants, and penalise tail-first or very fast spin releases) and re-run these four cases. Until then no actuator is confirmed.
 
+## Robust search at 2.37 m (DART-34)
+
+`darts throw --scripted --robust` averages the search cost over 6 of the 54 variants (nominal, release 10 ms early and late, two aero corners) and penalises tail-first releases, spin above 25 rad/s and release speed above 6 m/s. Same four power cases, seed 1, 8 vCPU CPU pod; the 54-variant `darts robust` check ran on each result. 2026-11-08.
+
+| Case | Release | Miss (nominal) | Spin | Sticks in 54 | Earlier (not robust) |
+|---|---|---|---|---|---|
+| AK60-6, no added mass | 5.08 m/s, 30 deg | 4 cm | 24 rad/s | 57% | 22% |
+| AK60-6, 0.38 kg each | 5.35 m/s, 25 deg | 8 cm | 33 rad/s | 44% | 20% |
+| RMD-X6-8-like | 5.52 m/s, 23 deg | 9 cm | 33 rad/s | 48% | 24% |
+| AK70-10 | 5.91 m/s, 23 deg | 17 cm | 17 rad/s | 56% | 56% (9.4 m/s) |
+
+Reading:
+- The objective fixes what it targeted: no tail-first releases, all releases under 6 m/s, and the AK60 stick rates roughly doubled. The AK70 now releases at a believable 5.9 m/s instead of 9.4 with the same stick rate.
+- No case reaches the 80% bar. Averaging 6 variants costs the nominal accuracy (4 to 17 cm misses, against 1 to 5 mm before) without making the throw reliable.
+- Spin is still 17 to 33 rad/s with mass added. The 0.4 to 0.65 kg of actuator mass hurts: both with-mass AK60 and RMD cases are worse than the bare AK60.
+- Not checked: more search budget, all 54 variants in the cost, a lower spin cap, or the cap on arrival angle. A first run with a cost cap of 3 m per variant collapsed to 0.1 to 0.4 m/s releases (every short throw cost the same); the cap is now 13.
+
+2.37 m stays a design target.
+
 ## Decision (2026-11-07)
 
 - `twin.yaml` stays at the working setup: board 0.5 m, stock servos, `power` off. It is the only setup with a robust throw (sticks 100% across the aero guesses, base-throw map in `docs/baselines/basemap.json`).
