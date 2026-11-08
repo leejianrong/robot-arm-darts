@@ -19,7 +19,9 @@ def _scripted(args: argparse.Namespace) -> int:
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
         return 2
     twin = load_twin(args.twin)
-    report, best = sweep(twin, seed=args.seed, maxiter=args.maxiter, popsize=args.popsize)
+    report, best = sweep(
+        twin, seed=args.seed, maxiter=args.maxiter, popsize=args.popsize, robust=args.robust
+    )
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "report.json").write_text(json.dumps(asdict(report), indent=2))
@@ -193,6 +195,7 @@ def main(argv: list[str] | None = None) -> int:
     throw.add_argument("--popsize", type=int, default=20)
     throw.add_argument("--out", default="runs/v1")
     throw.add_argument("--no-video", action="store_true")
+    throw.add_argument("--robust", action="store_true", help="average the cost over aero variants")
     drop = sub.add_parser("drop", help="launch a dart in free flight, no arm")
     drop.add_argument("--speed", type=float, required=True, help="launch speed, m/s")
     drop.add_argument("--angle", type=float, required=True, help="degrees above horizontal")
