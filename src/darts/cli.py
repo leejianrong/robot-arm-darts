@@ -172,6 +172,17 @@ def _visibility(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
+def _estimate(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from darts.estimate import measure
+
+    m = measure(load_twin(args.twin), args.n, args.seed, not args.clean)
+    print(json.dumps(m, indent=2))
+    return 0 if m["board_plane_error_m"]["p95"] <= args.max_p95 else 1
+
+
 def _robust(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
@@ -252,6 +263,12 @@ def main(argv: list[str] | None = None) -> int:
     vi.add_argument("--n", type=int, default=100)
     vi.add_argument("--seed", type=int, default=0)
     vi.add_argument("--twin", default="twin.yaml")
+    es = sub.add_parser("estimate", help="detector error over random board poses, JSON out")
+    es.add_argument("--n", type=int, default=100)
+    es.add_argument("--seed", type=int, default=0)
+    es.add_argument("--clean", action="store_true", help="no noise, blur or lighting change")
+    es.add_argument("--max-p95", type=float, default=0.01, help="exit 1 above this, metres")
+    es.add_argument("--twin", default="twin.yaml")
     rp = sub.add_parser("replay", help="render one policy throw at a seeded target to mp4")
     rp.add_argument("--policy", default="hand", help="random, hand, or a basemap.json")
     rp.add_argument("--seed", type=int, default=0)
@@ -266,5 +283,6 @@ def main(argv: list[str] | None = None) -> int:
         "basemap": _basemap,
         "robust": _robust,
         "visibility": _visibility,
+        "estimate": _estimate,
         "replay": _replay,
     }[args.cmd](args)

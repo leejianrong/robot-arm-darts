@@ -12,15 +12,14 @@ import numpy as np
 from scipy.optimize import least_squares
 
 from darts.board import DOUBLE_IN, DOUBLE_OUT
-from darts.camera import intrinsics, pose
+from darts.camera import intrinsics, pose, project
 from darts.twin import Twin
 
-EDGE_GROWTH = (
-    1.02  # the closed bright blob reads about 2% bigger than the ring; fitted on 100 renders
-)
+AXIS_RANGE = (0.6, 1.6)  # accepted ellipse axes against the nominal board's: a cut board is thinner
 MIN_AREA_PX = 400
 BORDER_PX = 2  # a blob touching the image edge may be cut off, so its outline is not the board's
-BRIGHT = 150  # HSV value of the lit ring and cream wedges; the wall and wood are darker
+BRIGHT = 110  # HSV value floor for the cream wedges, low enough to survive dim lighting
+MAX_SAT = 100  # cream is nearly white; the wall, wood and floor are all strongly coloured
 MAX_OUTLINE_ERR = 0.08  # mean ellipse-equation error of the outline; a cut disc or the rail fail
 
 
@@ -30,14 +29,16 @@ class BoardPose:
     normal: np.ndarray  # unit normal of the face, pointing at the thrower, world frame
 
 
-def _ellipse(rgb: np.ndarray):
+def _ellipse(rgb: np.ndarray, nominal: tuple[float, ...]):
     """cv2 ellipse ((cx, cy), (w, h), angle) of the board's outer ring, or None."""
     hue, sat, val = cv2.split(cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV))
     arm = (
         (hue > 15) & (hue < 40) & (sat > 120)
     )  # the yellow arm is bright too and touches the board
     mask = cv2.morphologyEx(
-        ((val > BRIGHT) & ~arm).astype(np.uint8), cv2.MORPH_CLOSE, np.ones((15, 15), np.uint8)
+        ((val > BRIGHT) & (sat < MAX_SAT) & ~arm).astype(np.uint8),
+        cv2.MORPH_CLOSE,
+        np.ones((15, 15), np.uint8),
     )
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     best = None
@@ -50,10 +51,18 @@ def _ellipse(rgb: np.ndarray):
             continue
         if x + w > rgb.shape[1] - BORDER_PX or y + h > rgb.shape[0] - BORDER_PX:
             continue
+        c = cv2.convexHull(
+            c
+        )  # the cream wedges are separated by black ones; their tips are the ring
         fitted = cv2.fitEllipse(c)
         if np.abs(_implicit(fitted, c.reshape(-1, 2).astype(float))).mean() > MAX_OUTLINE_ERR:
             continue
         (cx, cy), axes_px, deg = fitted
+        axes = sorted(axes_px, reverse=True)
+        if not all(
+            AXIS_RANGE[0] <= a / n <= AXIS_RANGE[1] for a, n in zip(axes, nominal, strict=True)
+        ):
+            continue
         e = (
             (cx + 0.5, cy + 0.5),
             axes_px,
@@ -76,13 +85,22 @@ def _implicit(e, pts: np.ndarray) -> np.ndarray:
 
 def detect_board(rgb: np.ndarray, twin: Twin) -> BoardPose | None:
     """Pose of the board from one RGB frame of the mast camera, or None if it is not in view."""
-    e = _ellipse(rgb)
+    r0 = twin.board.radius_m * DOUBLE_IN / DOUBLE_OUT
+    centre = np.array([twin.board.distance_m, 0.0, twin.board.centre_height_m])
+    ring0 = np.array(
+        [
+            project(twin, centre + r0 * np.array([0.0, np.cos(t), np.sin(t)]))
+            for t in np.linspace(0, 6.28, 36)
+        ]
+    )
+    nominal = tuple(sorted(cv2.fitEllipse(ring0.astype(np.float32))[1], reverse=True))
+    e = _ellipse(rgb, nominal)
     if e is None:
         return None
     pos, axes = pose(twin)
     to_world = axes * np.array([1.0, -1.0, -1.0])  # OpenCV camera axes (right, down, forward)
     k = intrinsics(twin)
-    r = EDGE_GROWTH * twin.board.radius_m * DOUBLE_IN / DOUBLE_OUT  # wedges end at the double ring
+    r = twin.board.radius_m * DOUBLE_IN / DOUBLE_OUT  # the wedge tips lie on the double ring
     ang = np.linspace(0, 2 * np.pi, 48, endpoint=False)
     ring = np.stack([np.cos(ang), np.sin(ang)])  # unit circle in the board's plane
 
