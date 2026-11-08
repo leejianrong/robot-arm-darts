@@ -135,3 +135,33 @@ def test_residual_env_adds_a_scaled_correction_to_the_hand_tuned_throw():
     env.step(np.ones(ACTION_DIM))  # a scale of 0 ignores the agent entirely
     hand = hand_tuned_policy(env.unwrapped.state(), np.random.default_rng(0))
     assert seen[0] == decode_action(hand)[0]
+
+
+def test_observation_noise_is_seeded_and_leaves_the_true_target_alone():
+    from darts.env import DartThrowEnv, ObsNoise
+    from darts.twin import load_twin
+
+    twin = load_twin("twin.yaml")
+    noise = ObsNoise((0.01, 0.01, 0.01), 0.02)
+    a, b = DartThrowEnv(twin, noise=noise), DartThrowEnv(twin, noise=noise)
+    (oa, ia), (ob, ib) = a.reset(seed=3), b.reset(seed=3)
+    assert (oa == ob).all()  # same seed, same noise
+    assert ia["target_yz_m"] == ib["target_yz_m"]
+    clean, info = DartThrowEnv(twin).reset(seed=3)
+    assert (
+        info["target_yz_m"] == ia["target_yz_m"]
+    )  # the board target is the same, only the view differs
+    assert not (oa == clean).all()
+    assert abs(np.linalg.norm(oa[3:6]) - 1.0) < 1e-9
+    assert (a.reset(seed=4)[0] != oa).any()
+
+
+def test_zero_noise_changes_nothing():
+    from darts.env import DartThrowEnv
+    from darts.interface import target_state
+    from darts.twin import load_twin
+
+    twin = load_twin("twin.yaml")
+    obs, info = DartThrowEnv(twin).reset(seed=1)
+    y, z = info["target_yz_m"]
+    assert (obs == target_state(twin, y, z).to_array()).all()
