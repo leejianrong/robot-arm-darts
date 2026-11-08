@@ -29,7 +29,7 @@ class BoardPose:
     normal: np.ndarray  # unit normal of the face, pointing at the thrower, world frame
 
 
-def _ellipse(rgb: np.ndarray, nominal: tuple[float, float]):
+def _ellipse(rgb: np.ndarray, nominal: tuple[float, ...]):
     """cv2 ellipse ((cx, cy), (w, h), angle) of the board's outer ring, or None."""
     hue, sat, val = cv2.split(cv2.cvtColor(rgb, cv2.COLOR_RGB2HSV))
     arm = (
