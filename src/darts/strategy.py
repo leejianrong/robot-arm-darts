@@ -21,6 +21,9 @@ class Target:
         return self.segment * {"single": 1, "double": 2, "treble": 3}[self.ring]
 
 
+TREBLE_20 = Target("treble", 20).points  # the most one dart can score outside the bull
+
+
 def choose_target(remaining: int) -> Target:
     """The target for the next dart. Treble 20 while far from out, then a single that leaves a
     double, then the double. Never aims at a score that would bust the turn."""
@@ -30,10 +33,10 @@ def choose_target(remaining: int) -> Target:
         return Target("bull")
     if remaining <= 40 and remaining % 2 == 0:
         return Target("double", remaining // 2)
-    if remaining <= 60:  # a single that leaves a double: D16 if it can, else the closest
+    if remaining <= TREBLE_20:  # a single that leaves a double: D16 if it can, else the closest
         return Target("single", min(20, max(1, remaining - 2 * SETUP_DOUBLE)))
     # T20 unless it leaves exactly 1 (a bust), then T19
-    return Target("treble", 19 if remaining - 60 == 1 else 20)
+    return Target("treble", 19 if remaining - TREBLE_20 == 1 else 20)
 
 
 def aim_point(target: Target) -> tuple[float, float]:
