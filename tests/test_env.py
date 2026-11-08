@@ -137,6 +137,8 @@ def test_residual_env_adds_a_scaled_correction_to_the_hand_tuned_throw():
     assert seen[0] == decode_action(hand)[0]
 
 
+@needs_assets
+@pytest.mark.integration
 def test_observation_noise_is_seeded_and_leaves_the_true_target_alone():
     from darts.env import DartThrowEnv, ObsNoise
     from darts.twin import load_twin
@@ -156,6 +158,8 @@ def test_observation_noise_is_seeded_and_leaves_the_true_target_alone():
     assert (a.reset(seed=4)[0] != oa).any()
 
 
+@needs_assets
+@pytest.mark.integration
 def test_zero_noise_changes_nothing():
     from darts.env import DartThrowEnv
     from darts.interface import target_state
