@@ -336,9 +336,11 @@ class ThrowSim:
 
     def _command(self, p: ThrowParams, t: float) -> None:
         self._derate_torque()
-        for n, target in zip(THROW_JOINTS, p.q_end, strict=True):
-            self._slew(n, target)
-        if t >= p.t_release_s:
+        lag = self.twin.servo.latency_s
+        if t >= lag:
+            for n, target in zip(THROW_JOINTS, p.q_end, strict=True):
+                self._slew(n, target)
+        if t >= p.t_release_s + lag + self.twin.release.jaw_delay_s:
             self._slew("gripper", self.twin.release.jaw_open_rad)
 
     def throw(

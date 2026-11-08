@@ -8,6 +8,7 @@ servo:                       # STS3215 at ~7.4 V; Menagerie gains
   kv: 2.731
   torque_limit_nm: 2.94      # stall torque, per Menagerie forcerange
   no_load_speed_rad_s: 0     # 0 = torque flat at every speed; real servos lose torque as they speed up (datasheet no-load speed)
+  latency_s: 0               # command to motion; unmeasured, fit with `darts sysid` (DART-30)
   velocity_limit_rad_s: 4.5  # datasheet 4.71 (0.222 s per 60 deg) minus buffer; measure on hardware
 power:                       # bigger actuators on shoulder_lift and elbow_flex (docs/real-darts-range.md)
   torque_limit_nm: 0         # 0 = off: those joints use the servo above
@@ -26,6 +27,7 @@ aero:                        # guesses for a 10 g dart with flights; fit to real
 release:
   jaw_hold_rad: -0.17        # jaw command while holding (squeezes against the dart, torque-limited)
   jaw_open_rad: 1.0          # jaw command at release
+  jaw_delay_s: 0             # extra delay on the open command; unmeasured, fit with `darts sysid`
   pad_friction: 1.0          # jaw pad friction coefficient (Menagerie default; measure on hardware)
 board:                       # regulation: centre 1.73 m above floor, scoring radius 170 mm
   distance_m: 0.5            # from the arm base axis; the 4.5 rad/s servo limit reaches about 0.5 m with a nose-first release
