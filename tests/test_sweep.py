@@ -60,3 +60,12 @@ def test_square_arrival_limit():
 
     assert square_arrival(result(arrival_angle_rad=0.3))
     assert not square_arrival(result(arrival_angle_rad=0.8))
+
+
+def test_tail_first_fast_spinning_or_very_fast_releases_are_penalised():
+    from darts.sweep import release_penalty
+
+    assert release_penalty(result(release_misalign_rad=0.3, release_spin_rad_s=10)) == 0
+    assert release_penalty(result(release_misalign_rad=3.0)) > 0.2  # tail-first
+    assert release_penalty(result(release_spin_rad_s=55)) > 0.2
+    assert release_penalty(result(release_speed_m_s=9.4)) > 0.5
