@@ -11,7 +11,7 @@ Derated sweeps need about 25 to 30 W of peak power per swing joint (8 to 10 N.m 
 ## Decision
 
 - Keep the SO-101 links and the ADR-0001 target. Swap shoulder_lift and elbow_flex for AK60-6 V3 (the twin's `power` section); pan, wrist and gripper stay on the STS3215.
-- The new joints talk CAN at 24 V; the rest stay on the serial bus. `LeRobotArm` therefore needs a mixed backend, written when hardware exists (DART-40, deferred).
+- The new joints talk CAN at 24 V; the rest stay on the serial bus. `LeRobotArm` therefore needs a mixed backend, written when hardware exists (DART-39, deferred).
 - `power` takes datasheet numbers after a check against the official PDF (DART-38): peak against rated torque, a torque-speed curve with a constant-torque region instead of the straight line, backlash, and the actuator masses.
 
 ## Alternatives considered

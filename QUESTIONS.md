@@ -32,7 +32,7 @@ None. Round 1 closed.
 | F8 | When is the move to real range done? | DECIDED | Distance ladder finds the farthest rung with at least 80% sticks; twin moves there; 2.37 m stays the goal | ADR-0009 |
 | F9 | Buying hardware | DECIDED | Not for the foreseeable future; gate is simulation only. First purchase later: one AK60-6 for a bench test | ADR-0009 |
 | Q14 | Power joints | ASSUMED | AK60-6 V3 on shoulder_lift and elbow_flex, SO-101 links kept, datasheet numbers checked in DART-38 | ADR-0010 |
-| Q15 | Real driver with CAN joints | DEFERRED | Mixed CAN and serial backend for `LeRobotArm` once hardware exists (DART-40) | ADR-0010 |
+| Q15 | Real driver with CAN joints | DEFERRED | Mixed CAN and serial backend for `LeRobotArm` once hardware exists (DART-39) | ADR-0010 |
 | Q16 | Human reference numbers | ASSUMED | Release speed about 5.3 m/s (second-hand), release angle 10 to 45 degrees, lean 0.4 m (no source); verify against primary papers in DART-36 | docs/real-darts-range.md |
 | Q13 | Success metric | ASSUMED | Mean tip error to commanded target (cm) over 100 seeded throws, domain-randomised | SLICES |
 
