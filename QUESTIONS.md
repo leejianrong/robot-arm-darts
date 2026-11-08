@@ -33,7 +33,7 @@ None. Round 1 closed.
 | F9 | Buying hardware | DECIDED | Not for the foreseeable future; gate is simulation only. First purchase later: one AK60-6 for a bench test | ADR-0009 |
 | Q14 | Power joints | ASSUMED | AK60-6 V3 on shoulder_lift and elbow_flex, SO-101 links kept, datasheet numbers checked in DART-38 | ADR-0010 |
 | Q15 | Real driver with CAN joints | DEFERRED | Mixed CAN and serial backend for `LeRobotArm` once hardware exists (DART-39) | ADR-0010 |
-| Q16 | Human reference numbers | ASSUMED | Release speed about 5.3 m/s (second-hand), release angle 10 to 45 degrees, lean 0.4 m (no source); verify against primary papers in DART-36 | docs/real-darts-range.md |
+| Q16 | Human reference numbers | DECIDED | Measured at 2.37 m: release 5.9 m/s at 16 deg above horizontal, wrist 26 rad/s, elbow 8.5, shoulder 3.8; lean derived at about 0.7 m, plan uses 0.4 m. Bands: 4.5 to 7 m/s, 10 to 25 deg | docs/real-darts-range.md |
 | Q13 | Success metric | ASSUMED | Mean tip error to commanded target (cm) over 100 seeded throws, domain-randomised | SLICES |
 
 ## Coverage

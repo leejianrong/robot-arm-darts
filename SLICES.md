@@ -297,11 +297,11 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 1. `darts throw --robust` takes `--distance`, and the search caps release at 0.4 m ahead of the base axis (the lean).
 2. A ladder job on a CPU pod runs 0.5, 1.0, 1.4, 1.8, 2.1 and 2.37 m with the AK60-6 power set, then `darts robust` (54 variants) on each result.
-3. Each row is flagged against the human bands (release speed 4 to 7 m/s, angle 10 to 45 degrees, hand within the lean), and the 0.2 m lean is run as a sensitivity check.
+3. Each row is flagged against the human bands (release speed 4.5 to 7 m/s, angle 10 to 25 degrees, hand within the lean), and the 0.2 m lean is run as a sensitivity check.
 
 **Demo:** a table in `docs/real-darts-range.md` naming the farthest rung with at least 80% sticks.
 
-**Rests on assumptions:** lean 0.4 m (Q16), stick thresholds (ADR-0005).
+**Rests on assumptions:** lean 0.4 m (conservative against the measured data, Q16), stick thresholds (ADR-0005). Optional variant: `power` on wrist_flex too (humans snap the wrist at 26 rad/s).
 
 ### Test plan
 
@@ -324,7 +324,7 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 **Build plan**
 
 1. Read the primary papers (PMC6797117, JHSE joint kinematics, the 2019 saloon-darts study) and take release speed, angle, joint speeds and reach with page references.
-2. Replace the second-hand 5.3 m/s and the unsourced lean in the bands with sourced numbers.
+2. Replace the second-hand 5.3 m/s in the bands with measured numbers (done, 2026-11-09); the lean stays derived.
 
 **Demo:** a table of human numbers with sources in `docs/real-darts-range.md`, and the bands in V10 read from it.
 
