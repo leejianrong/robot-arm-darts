@@ -54,6 +54,8 @@ Fit a base throw for every board target (a search per target, then a cubic map; 
 
 Train a PPO correction on the hand throw (on a RunPod pod via `scripts/pod_train.sh`, not the laptop): `darts train --steps 200000 --eval-every 10000 --max-seconds 5000`. It logs a held-out `EVAL` line and saves a checkpoint at each interval, aborts on a stop rule, and ends with the held-out result at nominal and extreme aero values in `metrics.json`.
 
+`darts.strategy.choose_target(remaining)` picks the next dart in 501 double-out (treble 20 while far from out, a single that leaves D16, then the double or the bull) and `aim_point` gives its board offset; the game turn loop that uses it is still to come.
+
 `darts.arm` puts the simulated and the real arm behind one `Arm` protocol (`prepare`, `set_targets`, `open_gripper`, `read_state`, `wait`). `plan(params)` turns a throw into timed commands, `run(arm, commands)` plays them on any arm and returns a log (`write_log` and `read_log` keep it as JSON lines). `SimArm` drives the MuJoCo arm; `LeRobotArm` is a stub over LeRobot's `send_action` and `get_observation` that has not touched hardware.
 
 Training can redraw the uncertain numbers every episode: `DartThrowEnv(twin, randomise=True)` scales servo gains and torque, dart mass, pad friction and the aero guesses within the `randomise` fractions in `twin.yaml` (`darts.randomise.sample`). Latency and jaw timing are not in the model yet, so they are not randomised.
