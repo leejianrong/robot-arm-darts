@@ -42,3 +42,11 @@ camera:                      # on a mast beside the arm, looking at the board ce
   fovy_deg: 60
   width_px: 640
   height_px: 480
+randomise:                   # training spread per episode, +- this fraction of the value above (DART-17)
+  servo_gain_frac: 0.1       # kp and kv
+  servo_torque_frac: 0.1
+  dart_mass_frac: 0.1
+  pad_friction_frac: 0.2
+  drag_frac: 0.5             # the aero numbers are guesses (ADR-0005): the spread matches `darts robust`
+  fin_torque_frac: 0.5
+  spin_damping_frac: 0.7

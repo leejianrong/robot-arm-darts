@@ -88,6 +88,20 @@ class Camera:
 
 
 @dataclass(frozen=True)
+class Randomise:
+    """Per-episode training spread: each value is drawn uniformly within +-this fraction of the
+    nominal. Latency and jaw timing are not in the model, so they cannot be randomised yet."""
+
+    servo_gain_frac: float  # kp and kv
+    servo_torque_frac: float
+    dart_mass_frac: float
+    pad_friction_frac: float
+    drag_frac: float
+    fin_torque_frac: float
+    spin_damping_frac: float
+
+
+@dataclass(frozen=True)
 class Twin:
     schema_version: int
     sim: Sim
@@ -99,6 +113,7 @@ class Twin:
     board: Board
     mount: Mount
     camera: Camera
+    randomise: Randomise
 
 
 _SECTIONS: dict[str, type] = {
@@ -111,6 +126,7 @@ _SECTIONS: dict[str, type] = {
     "board": Board,
     "mount": Mount,
     "camera": Camera,
+    "randomise": Randomise,
 }
 
 
