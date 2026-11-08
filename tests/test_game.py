@@ -1,3 +1,5 @@
+import pytest
+
 from darts.board import Hit
 from darts.game import Game
 
@@ -41,3 +43,14 @@ def test_double_out_checks_out():
 def test_bullseye_counts_as_a_double():
     g = Game(remaining=50)
     assert g.throw(Hit(50, "bull")) == "checkout"
+
+
+def test_turn_count_and_cap():
+    from darts.game import MAX_TURNS
+
+    g = Game()
+    for _ in range(3 * MAX_TURNS):
+        g.throw(SINGLE(1))
+    assert g.turns == MAX_TURNS and g.over and not g.finished
+    with pytest.raises(ValueError):
+        g.throw(SINGLE(1))

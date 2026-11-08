@@ -142,6 +142,30 @@ def _replay(args: argparse.Namespace) -> int:
     return 0
 
 
+def _game(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    from dataclasses import asdict
+
+    from darts.match import play, sim_thrower
+
+    twin = load_twin(args.twin)
+    game, log = play(sim_thrower(twin, _policy(args.policy), args.seed))
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    rows = [{**r, "params": asdict(r["params"]), "hit": asdict(r["hit"])} for r in log]
+    summary = {"remaining": game.remaining, "finished": game.finished, "turns": game.turns}
+    (out / "game.json").write_text(json.dumps({**summary, "darts": rows}, indent=2))
+    print(json.dumps(summary))
+    if args.replay:
+        from darts.render import render_game
+
+        n = render_game(twin, log, out / "game.mp4", args.max_darts)
+        print(f"video: {out / 'game.mp4'} ({n} of {len(log)} darts)")
+    return 0
+
+
 def _visibility(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
@@ -265,6 +289,13 @@ def main(argv: list[str] | None = None) -> int:
     vi.add_argument("--n", type=int, default=100)
     vi.add_argument("--seed", type=int, default=0)
     vi.add_argument("--twin", default="twin.yaml")
+    ga = sub.add_parser("game", help="play a 501 game by strategy, optionally render the replay")
+    ga.add_argument("--policy", default="hand", help="random, hand, or a basemap.json")
+    ga.add_argument("--seed", type=int, default=0)
+    ga.add_argument("--replay", action="store_true", help="render game.mp4 (slow, see docs)")
+    ga.add_argument("--max-darts", type=int, help="render only the first N darts")
+    ga.add_argument("--out", default="runs/game")
+    ga.add_argument("--twin", default="twin.yaml")
     es = sub.add_parser("estimate", help="detector error over random board poses, JSON out")
     es.add_argument("--n", type=int, default=100)
     es.add_argument("--seed", type=int, default=0)
@@ -286,5 +317,6 @@ def main(argv: list[str] | None = None) -> int:
         "robust": _robust,
         "visibility": _visibility,
         "estimate": _estimate,
+        "game": _game,
         "replay": _replay,
     }[args.cmd](args)

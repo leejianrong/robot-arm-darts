@@ -4,20 +4,28 @@ from dataclasses import dataclass, field
 
 from darts.board import Hit
 
+START_SCORE = 501
+MAX_TURNS = 40  # a game that has not finished by then is called off
+
 
 @dataclass
 class Game:
-    remaining: int = 501
+    remaining: int = START_SCORE
     finished: bool = False
     darts_in_turn: int = 0
+    turns: int = 0  # turns completed
     turn_start: int = field(init=False)
 
     def __post_init__(self) -> None:
         self.turn_start = self.remaining
 
+    @property
+    def over(self) -> bool:
+        return self.finished or self.turns >= MAX_TURNS
+
     def throw(self, hit: Hit) -> str:
         """Apply one dart. Returns "ok", "bust" or "checkout"."""
-        if self.finished:
+        if self.over:
             raise ValueError("game is over")
         left = self.remaining - hit.points
         is_double = hit.ring in ("double", "bull")
@@ -36,4 +44,5 @@ class Game:
 
     def _end_turn(self) -> None:
         self.darts_in_turn = 0
+        self.turns += 1
         self.turn_start = self.remaining
