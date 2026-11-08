@@ -188,7 +188,9 @@ Tripling the variants in the cost did not help (57% and 56% before), and the AK6
 
 Sources were thin. Joint-speed numbers for dart throwers were not in the search results (the full texts of Nasu et al. 2014, PLoS ONE, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6797117/ and the JHSE joint-kinematics paper are the places to look).
 
-- Release speed: one page in the search results (not identified, treat as unverified) gives about 5.5 m/s for experienced overhand throwers. The ballistic table above needs 4.8 to 5.4 m/s at a 20 to 30 deg release, so the target speed matches a human throw.
+- Release speed: a Royal Society Open Science dart study, as reported by the [Yale Alumni Magazine](https://www.yalealumnimagazine.com/articles/4512-perfect-pitch), found players most accurate with an overhand throw at about 5.3 m/s of arm speed, released 17 to 37 degrees before the arm is vertical (second-hand; the primary paper is the check in DART-36). The ballistic table above needs 4.8 to 5.4 m/s at a 20 to 30 deg release, so the target speed matches a human throw.
+- Reach and lean: the [rules](https://en.wikipedia.org/wiki/Oche) limit the feet, not the body, so a player may lean over the oche; no source gave a lean distance. The plan assumes the hand may be 0.4 m past the base axis at release (ADR-0009) and also tests 0.2 m. Human arm length, shoulder to fingertip, is about 0.6 to 0.7 m (general anatomy, not sourced), against about 0.5 m on the SO-101.
+- Bands used to flag a ladder row as suspicious (ADR-0009): release speed 4 to 7 m/s, release angle 10 to 45 degrees, hand within the lean. They are checks on the sim, not targets.
 - Joint speed (arithmetic, not a measurement): 5.5 m/s at the fingertip with a 0.45 to 0.6 m reach is 9 to 12 rad/s, or 525 to 700 deg/s. The 12 to 16 rad/s the sim needs is the same order as that, a bit higher because the sim's throw is a planar swing with no wrist snap.
 - Power (arithmetic from the model): the arm's moving links weigh about 0.5 kg. Moving them at an average of about 2.5 m/s is about 1.6 J, in about 0.15 s: roughly 10 W average and 25 to 30 W at the peak, which matches the sweep. A human forearm and hand (about 1.3 kg, general anatomy figure, not from the sources) reaching the same speeds needs about 60 W, which muscle supplies easily; the dart itself (10 g at 5.5 m/s) carries only 0.15 J.
 
@@ -196,6 +198,8 @@ Conclusion: the numbers make sense. Speed matches a human throw, and the power i
 
 ## Open items
 
+- Verify the human numbers against the primary papers (DART-36); the lean distance has no source.
+- Run the distance ladder (DART-35) before treating 2.37 m as reachable.
 - Check the shortlist against official datasheets (the listings conflict) and fit the real torque-speed curve instead of the straight line.
 - Mass and inertia of the bigger actuators (the sim still uses the stock SO-101 links), joint backlash, and which joints really need the big actuator (probably shoulder and elbow; the wrist and gripper may stay small).
 - Repeat the 12 rad/s, 8 N.m edge with more seeds; one seed decides it.

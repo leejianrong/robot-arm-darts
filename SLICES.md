@@ -288,3 +288,93 @@ All runs of V3 onward execute on RunPod (ADR-0002). V1 and V2 are small enough f
 
 - Log format round-trips a trajectory.
 - Protocol methods reject malformed targets.
+
+## V10: Distance ladder with the power joints
+
+**Delivers:** R1, ADR-0009
+
+**Build plan**
+
+1. `darts throw --robust` takes `--distance`, and the search caps release at 0.4 m ahead of the base axis (the lean).
+2. A ladder job on a CPU pod runs 0.5, 1.0, 1.4, 1.8, 2.1 and 2.37 m with the AK60-6 power set, then `darts robust` (54 variants) on each result.
+3. Each row is flagged against the human bands (release speed 4 to 7 m/s, angle 10 to 45 degrees, hand within the lean), and the 0.2 m lean is run as a sensitivity check.
+
+**Demo:** a table in `docs/real-darts-range.md` naming the farthest rung with at least 80% sticks.
+
+**Rests on assumptions:** lean 0.4 m (Q16), stick thresholds (ADR-0005).
+
+### Test plan
+
+#### End-to-end
+
+- The ladder prints one row per distance with stick rate, release speed, angle, spin and band flags, and a farthest-robust line.
+
+#### Integration
+
+- A throw search at a short distance with a lean cap returns a release no more than the cap ahead of the base axis.
+
+#### Unit
+
+- Band checks flag a 9 m/s release and a hand 0.6 m ahead as outside.
+
+## V11: Human reference numbers verified
+
+**Delivers:** Q16
+
+**Build plan**
+
+1. Read the primary papers (PMC6797117, JHSE joint kinematics, the 2019 saloon-darts study) and take release speed, angle, joint speeds and reach with page references.
+2. Replace the second-hand 5.3 m/s and the unsourced lean in the bands with sourced numbers.
+
+**Demo:** a table of human numbers with sources in `docs/real-darts-range.md`, and the bands in V10 read from it.
+
+### Test plan
+
+#### End-to-end
+
+- Every band edge in the ladder's check cites a source or is marked ASSUMED.
+
+## V12: Grip and wrist against spin (only if V10 stalls)
+
+**Delivers:** DART-34's open ideas
+
+**Build plan**
+
+1. Try a printed cradle pad grip (changes `GRIP_*`) and a wrist that cancels spin.
+2. Re-run the ladder's far rungs with each.
+
+**Demo:** stick rate at the far rung with and without each variant.
+
+**Rests on assumptions:** gate: only worth doing if no rung beyond 1.0 m passes.
+
+### Test plan
+
+#### End-to-end
+
+- `darts robust` stick rate at the chosen rung rises over the stock grip, or the variant is dropped with the numbers recorded.
+
+## V13: Move the twin to the working distance and datasheet-true power joints
+
+**Delivers:** ADR-0009, ADR-0010
+
+**Build plan**
+
+1. Read the official AK60-6 PDF: peak against rated torque, torque-speed curve, backlash, mass. Update the `power` section.
+2. Set `board.distance_m` and `power` to the working rung. Redo the base-throw map, the robust check and the camera visibility check.
+3. Mixed CAN and serial backend for `LeRobotArm` stays deferred until hardware exists.
+
+**Demo:** `darts robust` on the new baseline sticks in at least 80% of variants at the new distance.
+
+### Test plan
+
+#### End-to-end
+
+- `darts robust` at the twin's distance sticks at least 80%.
+
+#### Integration
+
+- `darts visibility` still shows the board at least 98% visible.
+
+#### Unit
+
+- `twin.yaml` loads with the datasheet numbers, and the constants guard still passes.

@@ -118,6 +118,10 @@ Pods must be torn down on every path. The runner uses the runpod-jobs dead-man's
 | Q5 | One `twin.yaml` is the only source of physical parameters | High if broken. Hard-coded numbers elsewhere would defeat the twin |
 | Q13 | Targets: ≥90% of throws on board and median tip error ≤3 cm on state | High. With the nose-first cross grip the arm reaches 0.5 m and lands 15 cm low, so ≤3 cm is far off. Baseline: a fixed throw panned at the target gets median 24 cm and 71% on board. Training has to close that gap |
 
+## Real range (2.37 m)
+
+The board stays at 0.5 m until a robust throw exists further out. The route (ADR-0009, ADR-0010): a distance ladder with the AK60-6 power joints, checked against human numbers; the twin moves to the farthest robust rung; grip and wrist variants attack the spin if the ladder stalls; datasheet-true power-joint numbers go into the twin. Hardware purchase is out of scope. Slices V10 to V13.
+
 ## Open risks
 
 - **Reach (measured after V2).** The V1/V2 "1.0 m works" result came from a tumbling dart that stuck by luck. Holding the dart across the fingers (wrist roll 90°) releases it along its direction of travel, but the usable release speed is about 2.8 m/s, so searches at 0.6 to 1.0 m find no robust stuck throw. At 0.5 m a throw sticks in 83% of `darts robust` variants and lands 15 cm low, so `twin.yaml` now says 0.5 m. A faster servo supply (12 V STS3215, about 7 rad/s) or a better pad geometry would extend it; worth checking on hardware.
