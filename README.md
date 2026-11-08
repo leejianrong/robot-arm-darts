@@ -68,6 +68,13 @@ target (+0.050, +0.004) m from centre; stuck=True score=14
 video: runs/replay.mp4
 ```
 
+`darts game` plays a whole 501 double-out game: the strategy picks each target, the policy throws, the sim is reset between darts (the magic dart: no pick-up), a bust restores the turn's starting score, and a game that is not out after 40 turns is called off (`darts.match`, `darts.game`). It writes `game.json` (every dart, its target and hit) in seconds; `--replay` also renders `game.mp4` with the running score on top, which costs about 80 s a dart with OSMesa, so use `--max-darts` locally or a CPU pod for a whole game.
+
+```console
+$ uv run darts game --policy hand --seed 0
+{"remaining": 31, "finished": false, "turns": 40}
+```
+
 ## Contributing
 
 Conventions are in [`CLAUDE.md`](CLAUDE.md). Training and rendering are meant for a rented GPU pod (RunPod).
