@@ -184,21 +184,38 @@ Tripling the variants in the cost did not help (57% and 56% before), and the AK6
 - The planned 2.37 m actuator is the CubeMars AK60-6 (9 N.m, 33.5 rad/s) on shoulder_lift and elbow_flex, stock servos elsewhere. It is a design target only: no 2.37 m throw has been shown reliable (20 to 56% sticks across variants), and the listing figures are unchecked against datasheets.
 - Switching `twin.yaml` to 2.37 m waits for a robust search (average the cost over release jitter and aero variants, penalise tail-first and very fast spin releases) that finds a throw sticking in at least 80% of variants. Tracked as a Pandan card.
 
-## Sanity check against human throwers
+## Human reference numbers (DART-36, read 2026-11-09)
 
-Sources were thin. Joint-speed numbers for dart throwers were not in the search results (the full texts of Nasu et al. 2014, PLoS ONE, https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6797117/ and the JHSE joint-kinematics paper are the places to look).
+Measured values come from [Huang et al. 2024, JHSE 19(3)](https://www.jhse.es/index.php/jhse/article/view/joint-kinematics-analysis-accuracy-dart-throwing): 16 players (8 advanced, 8 intermediate) at the regulation 2.37 m and 1.73 m bull, motion capture, three throws at each of three target heights. The table is its Tables 2 and 5, advanced group, centre target, mean (SD).
 
-- Release speed: a Royal Society Open Science dart study, as reported by the [Yale Alumni Magazine](https://www.yalealumnimagazine.com/articles/4512-perfect-pitch), found players most accurate with an overhand throw at about 5.3 m/s of arm speed, released 17 to 37 degrees before the arm is vertical (second-hand; the primary paper is the check in DART-36). The ballistic table above needs 4.8 to 5.4 m/s at a 20 to 30 deg release, so the target speed matches a human throw.
-- Reach and lean: the [rules](https://en.wikipedia.org/wiki/Oche) limit the feet, not the body, so a player may lean over the oche; no source gave a lean distance. The plan assumes the hand may be 0.4 m past the base axis at release (ADR-0009) and also tests 0.2 m. Human arm length, shoulder to fingertip, is about 0.6 to 0.7 m (general anatomy, not sourced), against about 0.5 m on the SO-101.
-- Bands used to flag a ladder row as suspicious (ADR-0009): release speed 4 to 7 m/s, release angle 10 to 45 degrees, hand within the lean. They are checks on the sim, not targets.
-- Joint speed (arithmetic, not a measurement): 5.5 m/s at the fingertip with a 0.45 to 0.6 m reach is 9 to 12 rad/s, or 525 to 700 deg/s. The 12 to 16 rad/s the sim needs is the same order as that, a bit higher because the sim's throw is a planar swing with no wrist snap.
-- Power (arithmetic from the model): the arm's moving links weigh about 0.5 kg. Moving them at an average of about 2.5 m/s is about 1.6 J, in about 0.15 s: roughly 10 W average and 25 to 30 W at the peak, which matches the sweep. A human forearm and hand (about 1.3 kg, general anatomy figure, not from the sources) reaching the same speeds needs about 60 W, which muscle supplies easily; the dart itself (10 g at 5.5 m/s) carries only 0.15 J.
+| Quantity | Human value | Source |
+|---|---|---|
+| Dart release speed | 5.90 (0.29) m/s resultant; intermediates 6.02 (0.41) | Huang Table 2 |
+| Release speed, Smeets 2002 darts data | 5.8 to 6.7 m/s, released 4 to 25 ms before the hand peaks, hand moving on a circle of 0.5 to 0.7 m radius | quoted in [Venkadesan and Mahadevan 2017](https://pmc.ncbi.nlm.nih.gov/articles/PMC5414278/), section 5.1 |
+| Release velocity components | forward 5.68, up 1.59 m/s | Huang Table 2 |
+| Release angle (dart, above horizontal) | 15.6 deg (derived: higher target 19.6, lower 13.0) | from Huang Table 2 |
+| Release height | 1.70 m for players 1.77 m tall (board centre 1.73) | Huang Table 2 |
+| Elbow extension speed at release | 485 deg/s = 8.5 rad/s | Huang Table 5 |
+| Shoulder elevation speed | 216 deg/s = 3.8 rad/s | Huang Table 5 |
+| Wrist palmar flexion speed | 1503 deg/s = 26 rad/s | Huang Table 5 |
+| Elbow flexion angle at release | 70 deg | Huang Table 5 |
+| Model optimum (theory, not measured) | 5.1 to 5.5 m/s, released 17 to 37 deg before the arm is vertical | Venkadesan and Mahadevan, section 5.1 |
 
-Conclusion: the numbers make sense. Speed matches a human throw, and the power is small for muscle but several times what a 3 W hobby servo can deliver. The gap is the actuators, not the physics.
+What this changes:
+- **The earlier 5.3 and 5.5 m/s figures were model optima, not measurements**; the measured speed is about 5.9 m/s (up to 6.7). The target speed of 4.8 to 5.4 m/s in the ballistic table is a little below a human's.
+- **"17 to 37 degrees" is an arm angle, not the dart's release angle.** The dart leaves about 13 to 20 degrees above horizontal and arrives about 14 degrees below it (my ballistic integration of the measured release, with the twin's drag). The robust 2.37 m searches released at 23 to 30 degrees and arrived at 26 to 40 degrees: steeper lobs than a human's flat throw.
+- **Lean (derived, not measured).** Integrating the mean release velocity from 1.70 m height until the dart is back at 1.73 m gives about 1.7 m of flight for a centre throw (2.2 m for the higher target, 1.1 m for the lower), so the mean release sits about 0.7 m in front of the throw line. The 0.4 m lean in ADR-0009 is inside that, and conservative; the paper does not report hand position against the line.
+- **Humans throw with the wrist.** The wrist turns at 26 rad/s at release, the elbow at 8.5, the shoulder at 3.8. The twin's wrist_flex is a stock servo at 4.5 rad/s and only shoulder_lift and elbow_flex get the power set, so the sim cannot throw the way a human does. The earlier estimate of 9 to 12 rad/s of joint speed overstated what a human shoulder and elbow do; a fast wrist snap supplies the rest. This is the first thing to try if the ladder stalls (DART-37), and a candidate ladder variant: `power` on wrist_flex too.
+- **Release timing.** Human timing variability is about 2 to 7 ms ([Springer 2017 review](https://link.springer.com/article/10.3758/s13428-017-0952-0), second-hand figure for Smeets), and the `darts robust` variants jitter release by plus or minus 10 ms. The 80% bar is stricter than a human's timing; a robot's jitter comes from servo and jaw delay, which DART-30's fitter measures once there is hardware.
+- **Mass and power.** The arm's moving links weigh about 0.5 kg (twin model). Moving them at 2.5 m/s average is about 1.6 J in about 0.15 s: roughly 10 W average and 25 to 30 W at the peak. The dart itself (10 g at 5.9 m/s) carries 0.17 J.
+
+Bands for the ladder (ADR-0009), from the measurements above: release speed 4.5 to 7 m/s, release angle 10 to 25 degrees (flag, not reject, above), hand no further than the lean past the base. Not sourced: arm length (about 0.6 to 0.7 m is general anatomy; Smeets' hand circle is 0.5 to 0.7 m, which agrees) and any limit on lean.
+
+Other papers read and not useful for speeds: [Nasu et al. 2014](https://pmc.ncbi.nlm.nih.gov/articles/PMC3922883/) (16 players at 2.44 m, speeds not reported); [PLOS ONE 2019, pone.0223837](https://pmc.ncbi.nlm.nih.gov/articles/PMC6797117/) (8 players at 2.37 m, speeds shown only in a figure).
 
 ## Open items
 
-- Verify the human numbers against the primary papers (DART-36); the lean distance has no source.
+- No source reports the hand position against the throw line; the lean is derived (see above).
 - Run the distance ladder (DART-35) before treating 2.37 m as reachable.
 - Check the shortlist against official datasheets (the listings conflict) and fit the real torque-speed curve instead of the straight line.
 - Mass and inertia of the bigger actuators (the sim still uses the stock SO-101 links), joint backlash, and which joints really need the big actuator (probably shoulder and elbow; the wrist and gripper may stay small).

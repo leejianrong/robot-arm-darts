@@ -10,9 +10,9 @@ A regulation throw is 2.37 m (steel tip, 7 ft 9¼ in) from the board face. The t
 
 ## Decision
 
-1. **The base sits at the throw line.** `board.distance_m` is base axis to board and stays the 2.37 m target. The hand may reach up to 0.4 m ahead of the base axis at release, the lean of a human thrower (ASSUMED: no source gives a lean distance; the ladder also reports 0.2 m). The searches have released only 0.1 to 0.3 m ahead so far.
+1. **The base sits at the throw line.** `board.distance_m` is base axis to board and stays the 2.37 m target. The hand may reach up to 0.4 m ahead of the base axis at release, the lean of a human thrower (no source reports lean; the measured release velocity implies about 0.7 m in front of the line, so 0.4 m is conservative; the ladder also reports 0.2 m). The searches have released only 0.1 to 0.3 m ahead so far.
 2. **Distance ladder.** Search with the AK60-6 power joints at 0.5, 1.0, 1.4, 1.8, 2.1 and 2.37 m (CPU pod, about $1). The farthest rung with at least 80% sticks in the 54 `darts robust` variants sets the working distance. `twin.yaml` moves there, with baselines redone. 2.37 m stays the goal until a throw passes there.
-3. **Human sanity bands.** Every ladder row is flagged against what human players do (`docs/real-darts-range.md`): release speed about 4 to 7 m/s, release angle 10 to 45 degrees, hand no further than the lean past the base. A result outside the bands is treated as a solver artifact until shown otherwise.
+3. **Human sanity bands.** Every ladder row is flagged against what human players do (`docs/real-darts-range.md`): release speed 4.5 to 7 m/s, release angle 10 to 25 degrees (measured about 16), hand no further than the lean past the base. A result outside the bands is treated as a solver artifact until shown otherwise.
 4. **No purchase gate.** Hardware is out of scope. When it comes back in scope, buy one AK60-6 first and bench-test its torque-speed curve and backlash before the second.
 
 ## Alternatives considered
