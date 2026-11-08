@@ -69,3 +69,11 @@ def test_tail_first_fast_spinning_or_very_fast_releases_are_penalised():
     assert release_penalty(result(release_misalign_rad=3.0)) > 0.2  # tail-first
     assert release_penalty(result(release_spin_rad_s=55)) > 0.2
     assert release_penalty(result(release_speed_m_s=9.4)) > 0.5
+
+
+def test_the_wide_variant_set_covers_every_aero_corner_with_all_three_jitters():
+    from darts.sweep import WIDE_VARIANTS
+
+    assert len(WIDE_VARIANTS) == 18
+    assert len({v[:3] for v in WIDE_VARIANTS}) == 18
+    assert {v[3] for v in WIDE_VARIANTS} == {-0.01, 0.0, 0.01}

@@ -195,7 +195,13 @@ def main(argv: list[str] | None = None) -> int:
     throw.add_argument("--popsize", type=int, default=20)
     throw.add_argument("--out", default="runs/v1")
     throw.add_argument("--no-video", action="store_true")
-    throw.add_argument("--robust", action="store_true", help="average the cost over aero variants")
+    throw.add_argument(
+        "--robust",
+        nargs="?",
+        const="basic",
+        choices=["basic", "wide"],
+        help="average the cost over 6 (basic) or 18 (wide) aero and release-time variants",
+    )
     drop = sub.add_parser("drop", help="launch a dart in free flight, no arm")
     drop.add_argument("--speed", type=float, required=True, help="launch speed, m/s")
     drop.add_argument("--angle", type=float, required=True, help="degrees above horizontal")

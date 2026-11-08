@@ -84,7 +84,8 @@ render)  # which GL backend works on this pod, and does it match the laptop? see
   echo "RESULT nvidia-smi: $(nvidia-smi -L 2>&1 | head -1)"
   step clip 900 env MUJOCO_GL=osmesa uv run darts replay --policy hand --seed 3 --out "$RUN/clip.mp4" ;;
 reach)  # what servo does a board at REACH_DIST need? one scripted search per speed x torque
-  pids=""; RB=$([ "${REACH_ROBUST:-0}" = 1 ] && echo --robust)
+  pids=""; RB=""; IT="--maxiter 60 --popsize 20"
+  case "${REACH_ROBUST:-0}" in 1) RB="--robust" ;; wide) RB="--robust wide"; IT="--maxiter 40 --popsize 15" ;; esac
   for set in $REACH_POWER_SETS; do  # T:W:shoulder_kg:elbow_kg on shoulder_lift and elbow_flex, stock servo elsewhere
     IFS=: read -r T W MS ME <<< "$set"; tag=$(echo "$set" | tr ':' '_')
     uv run python -c "
@@ -92,7 +93,7 @@ import yaml; t = yaml.safe_load(open('twin.yaml'))
 t['board']['distance_m'] = $REACH_DIST
 t['power'] = dict(torque_limit_nm=$T, no_load_speed_rad_s=$W, velocity_limit_rad_s=$W, shoulder_mass_kg=$MS, elbow_mass_kg=$ME)
 yaml.safe_dump(t, open('$WORK/twin_$tag.yaml', 'w'))"
-    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 $RB --twin "$WORK/twin_$tag.yaml" --out "$RUN/p$tag" > "$WORK/reach_$tag.log" 2>&1
+    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" $IT $RB --twin "$WORK/twin_$tag.yaml" --out "$RUN/p$tag" > "$WORK/reach_$tag.log" 2>&1
      echo "RESULT power=$set (T N.m:no-load rad/s:shoulder kg:elbow kg) dist=$REACH_DIST robust=$REACH_ROBUST: $(grep -E 'best throw|release attitude|hits the board' "$WORK/reach_$tag.log" | tr '\n' ' ') $(uv run darts robust --report "$RUN/p$tag/report.json" --twin "$WORK/twin_$tag.yaml" | tr -d '\n ')") &
     pids="$pids $!"
   done
@@ -102,7 +103,7 @@ import yaml; t = yaml.safe_load(open('twin.yaml'))
 t['board']['distance_m'] = $REACH_DIST; t['servo']['velocity_limit_rad_s'] = $v; t['servo']['torque_limit_nm'] = $q
 if '$REACH_DERATE' == '1': t['servo']['no_load_speed_rad_s'] = $v
 yaml.safe_dump(t, open('$WORK/twin_${v}_$q.yaml', 'w'))"
-    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" --maxiter 60 --popsize 20 $RB --twin "$WORK/twin_${v}_$q.yaml" --out "$RUN/v${v}_q$q" > "$WORK/reach_${v}_$q.log" 2>&1
+    (timeout 3000 uv run darts throw --scripted --no-video --seed "$SEED" $IT $RB --twin "$WORK/twin_${v}_$q.yaml" --out "$RUN/v${v}_q$q" > "$WORK/reach_${v}_$q.log" 2>&1
      echo "RESULT speed=$v rad/s torque=$q N.m dist=$REACH_DIST: $(grep -E 'best throw|hits the board' "$WORK/reach_${v}_$q.log" | tr '\n' ' ')") &
     pids="$pids $!"
   done; done

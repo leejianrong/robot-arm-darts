@@ -167,6 +167,15 @@ Reading:
 - Spin is still 17 to 33 rad/s with mass added. The 0.4 to 0.65 kg of actuator mass hurts: both with-mass AK60 and RMD cases are worse than the bare AK60.
 - Not checked: more search budget, all 54 variants in the cost, a lower spin cap, or the cap on arrival angle. A first run with a cost cap of 3 m per variant collapsed to 0.1 to 0.4 m/s releases (every short throw cost the same); the cap is now 13.
 
+Second attempt (`--robust wide`: 18 variants, every aero corner with early, on-time and late release; spin cap 15 rad/s; 40 generations of 15; bare AK60 and AK70 only):
+
+| Case | Release | Miss (nominal) | Spin | Sticks in 54 |
+|---|---|---|---|---|
+| AK60-6, no added mass | 5.07 m/s, 28 deg | 2 cm | 24 rad/s | 46% |
+| AK70-10 | 5.99 m/s, 23 deg | 12 cm | 15.5 rad/s | 54% |
+
+Tripling the variants in the cost did not help (57% and 56% before), and the AK60 still spins at 24 rad/s despite the cap. The knife-edge is not something a better average fixes with this search: the swing itself puts a fast spin and a sensitive release on the dart. Next ideas, none tried: a different grip or release (the dart is held across the fingers, `GRIP_*` in `sim.py`), a wrist that actively cancels spin, or accepting a looser stick criterion once real dart data exists (ADR-0005 numbers are guesses).
+
 2.37 m stays a design target.
 
 ## Decision (2026-11-07)

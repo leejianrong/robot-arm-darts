@@ -2,11 +2,12 @@
 
 import math
 from dataclasses import asdict, dataclass, replace
+from itertools import product
 
 import numpy as np
 from scipy.optimize import differential_evolution, minimize
 
-from darts.robust import aero_variant
+from darts.robust import DRAG, FIN_TORQUE, RELEASE_JITTER_S, SPIN_DAMPING, aero_variant
 from darts.sim import THROW_JOINTS, ThrowParams, ThrowResult, ThrowSim, build_model
 from darts.twin import Twin
 
@@ -29,7 +30,7 @@ BOUNCE_PENALTY_M = 0.2  # small enough that touching the face beats skimming pas
 # Release attitudes that only work when everything goes right: tail-first, spinning fast, or a
 # release speed past what the solver is trusted for (CLAUDE.md).
 MAX_MISALIGN_RAD = math.pi / 2
-MAX_SPIN_RAD_S = 25.0
+MAX_SPIN_RAD_S = 15.0
 MAX_RELEASE_SPEED_M_S = 6.0
 MISALIGN_PENALTY_M = 0.3
 SPIN_PENALTY_M_PER_RAD_S = 0.01
@@ -38,7 +39,7 @@ VARIANT_COST_CAP = 13.0  # above 10 + any shortfall, so falling short keeps its 
 # crashed throw (100) is capped, so one bad variant cannot drown the average
 # (fin, damping, drag multipliers, release-time jitter s): the nominal throw, early and late
 # release, and the two aero corners. A subset of `darts robust`'s 54 so a search stays affordable.
-ROBUST_VARIANTS = (
+BASIC_VARIANTS = (
     (1.0, 1.0, 1.0, 0.0),
     (1.0, 1.0, 1.0, -0.01),
     (1.0, 1.0, 1.0, 0.01),
@@ -46,6 +47,13 @@ ROBUST_VARIANTS = (
     (2.0, 3.0, 1.5, 0.0),
     (0.5, 3.0, 1.5, 0.01),
 )
+# Every fin x damping x drag combination of `darts robust`, with the jitter cycling through its
+# three values: 18 of the 54, each aero corner seen with early, on-time and late release.
+WIDE_VARIANTS = tuple(
+    (f, d, g, RELEASE_JITTER_S[i % 3])
+    for i, (f, d, g) in enumerate(product(FIN_TORQUE, SPIN_DAMPING, DRAG))
+)
+ROBUST_VARIANTS = {"basic": BASIC_VARIANTS, "wide": WIDE_VARIANTS}
 
 
 def release_penalty(r: ThrowResult) -> float:
@@ -107,14 +115,14 @@ class Report:
 
 
 def sweep(
-    twin: Twin, seed: int = 0, maxiter: int = 60, popsize: int = 15, robust: bool = False
+    twin: Twin, seed: int = 0, maxiter: int = 60, popsize: int = 15, robust: str | None = None
 ) -> tuple[Report, ThrowParams]:
-    """Search for a throw. With `robust`, the cost averages over ROBUST_VARIANTS and adds
-    `release_penalty`, so the answer survives the aero guesses and release jitter."""
+    """Search for a throw. With `robust` ("basic" or "wide"), the cost averages over that set of
+    ROBUST_VARIANTS and adds `release_penalty`, so the answer survives aero guesses and jitter."""
     sim = ThrowSim(twin, build_model(twin))
     variants = [
         (ThrowSim(aero_variant(twin, f, d, g), build_model(twin)), j)
-        for f, d, g, j in ROBUST_VARIANTS
+        for f, d, g, j in (ROBUST_VARIANTS[robust] if robust else ())
     ]
     bounds = [LIMITS[j] for j in THROW_JOINTS] * 2 + [T_RELEASE]
     seen = {"n": 0, "max_speed": 0.0}
