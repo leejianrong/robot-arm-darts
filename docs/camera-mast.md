@@ -46,3 +46,7 @@ OSMesa is the headless backend: it needs `apt install libosmesa6` and gives the 
 The degraded set (`docs/baselines/estimator_error.json`) is the error model for DART-16 and DART-25. The card's "within 1 cm at 1.5 m for 95%" does not apply at the 0.5 m setup; at 0.5 m the degraded p95 is 1.4 cm, just over a 1 cm bar. The clean error has a steady 3 mm offset (a bias, not noise).
 
 Limits: a board partly hidden by the arm is not always rejected, because the hull of the visible wedge tips can still fit the full ellipse, and the board's normal is only checked loosely. Lighting changes here are brightness and offset only, no colour shift or shadows.
+
+## Observation noise (DART-16)
+
+`DartThrowEnv(twin, noise=ObsNoise(...))` adds seeded error to the target and board normal the policy sees; the reward and the true target are untouched, and the same reset seed gives the same noise. `ObsNoise.from_estimator_json` reads the degraded-frame error model above (target std per axis, normal tilt from the p95 over 2), and `darts eval --obs-noise docs/baselines/estimator_error.json` evaluates a policy under it. The estimator's steady 3 mm offset is not modelled.

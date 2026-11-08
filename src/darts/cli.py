@@ -111,10 +111,11 @@ def _eval(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
         return 2
-    from darts.env import DartThrowEnv
+    from darts.env import DartThrowEnv, ObsNoise
     from darts.evaluate import evaluate
 
-    env = DartThrowEnv(load_twin(args.twin))
+    noise = ObsNoise.from_estimator_json(args.obs_noise) if args.obs_noise else None
+    env = DartThrowEnv(load_twin(args.twin), noise=noise)
     seeds = list(range(args.seed, args.seed + args.n))
     policy = _policy(args.policy)
     result = evaluate(env, policy, seeds) | {"policy": args.policy}
@@ -223,6 +224,7 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--policy", required=True, help="random, hand, or a policy.zip from `train`")
     ev.add_argument("--n", type=int, default=100)
     ev.add_argument("--seed", type=int, default=0, help="first seed; the list is seed..seed+n-1")
+    ev.add_argument("--obs-noise", help="an estimator_error.json: blur what the policy sees")
     ev.add_argument("--twin", default="twin.yaml")
     tr = sub.add_parser("train", help="train a PPO residual on the hand-tuned throw")
     tr.add_argument("--steps", type=int, default=20_000)
