@@ -31,3 +31,11 @@ At 0.5 m the hand works within half a metre of the board, so any camera near the
 | laptop, pod | egl | fails (`EGLError`): no GPU, no `nvidia-smi` | | | | |
 
 OSMesa is the headless backend: it needs `apt install libosmesa6` and gives the same pixels on the laptop and the pod. EGL needs a GPU pod, which nothing so far calls for (a clip takes about 80 s on OSMesa). If rendering ever becomes the bottleneck, try EGL on a GPU template and re-run `gl_check.py` to compare against this table.
+
+## Board detector (DART-23)
+
+`darts.detect.detect_board(rgb, twin)` finds the board in a mast-camera frame and returns its centre and normal in the world frame, or `None` when the board is not fully in view. It thresholds the bright pixels (the cream wedges; the yellow arm is masked out by hue because it touches the board in the image), closes the gaps, keeps the biggest blob whose outline is an ellipse, and solves for the circle whose projection matches that ellipse (`scipy.optimize.least_squares`, started from the ellipse). A first version took the corners of the black square under the board; shadows and wood grooves bled into its mask, so it was dropped.
+
+100 random boards (0.45 to 0.60 m away, centre 1.63 to 1.83 m high), camera fixed at the nominal pose, clean renders, error in the board plane: 0 failures, median 1.3 mm, 95th percentile 4.7 mm, worst 8.6 mm. `EDGE_GROWTH` (1.02) was fitted on these renders to cancel a bias, so this is the fit's own data; DART-24 measures it on fresh poses with image noise, blur and lighting changes.
+
+`None` comes back for no board, a board cut by the frame edge, or a board partly hidden (the outline stops being an ellipse). It does not yet distinguish those cases.
