@@ -122,7 +122,7 @@ def sweep(
     sim = ThrowSim(twin, build_model(twin))
     variants = [
         (ThrowSim(aero_variant(twin, f, d, g), build_model(twin)), j)
-        for f, d, g, j in ROBUST_VARIANTS.get(robust, ())
+        for f, d, g, j in (ROBUST_VARIANTS[robust] if robust else ())
     ]
     bounds = [LIMITS[j] for j in THROW_JOINTS] * 2 + [T_RELEASE]
     seen = {"n": 0, "max_speed": 0.0}
