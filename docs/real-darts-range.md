@@ -201,6 +201,34 @@ Reading:
 
 Next steps this points to (not done): a longer or wider search at 1.0 m to see whether 0% is a search failure; allow the search to release further forward; the wrist_flex power variant and a spin-cancelling wrist (DART-37).
 
+## Why the best throws stick about half the time (DART-37, 2026-11-10)
+
+Throwaway experiments on the ladder's best rung (1.8 m, AK60-6 power set, robust search, seed 1, one run each; the script was not kept). Each changed one thing from the ladder search and ran the 54-variant check.
+
+| Experiment | Sticks | Release x | Spin | Release angle |
+|---|---|---|---|---|
+| Ladder baseline (1.8 m) | 56% | -0.10 m | 22 rad/s | 24 deg |
+| Release required at least 0.25 m ahead of the base axis (penalty 1 m per m short) | 57% | -0.09 m | 22 rad/s | 22 deg |
+| wrist_flex on a fast actuator (3 N.m, 30 rad/s) | 52% | -0.13 m | 16 rad/s | 28 deg |
+| Both of the above | 57% | -0.09 m | 22 rad/s | 23 deg |
+| Spin cap 8 rad/s, penalty 0.05 m per rad/s (was 15 and 0.01) | 35% | -0.14 m | 14 rad/s | 34 deg |
+| Hard spin penalty and fast wrist | 15% | -0.17 m | 14 rad/s | 40 deg |
+| Hard spin penalty and fast wrist, 2.37 m | 7% | -0.09 m | 16 rad/s | 26 deg |
+
+Other checks:
+- **A throw exists at 1.0 m, but only a knife-edge one.** The plain (non-robust) search with three seeds hits the centre to 0 to 1 cm, releasing 171 to 177 degrees off the direction of travel (tail-first) and spinning 55 to 69 rad/s. The ladder's 0% at 1.0 m is the robust cost correctly rejecting those, not a broken search.
+- **Forward release is reachable but not chosen.** The dart can be 0.48 m ahead of the base axis (28% of random poses are past 0.3 m), yet requiring 0.25 m left the throw unchanged: the search pays the penalty rather than throw forward.
+- **Every failure is the same kind, and the fin guess drives it.** For the 1.8 m and 2.37 m ladder throws, all 24 and 28 failing variants arrive slanted past the 0.9 rad stick limit; none are too slow or miss the plane. By fin torque multiplier the stick counts are 15/18, 12/18, 3/18 (0.5x, 1x, 2x) at 1.8 m and 14/18, 12/18, 0/18 at 2.37 m. Release-time jitter (plus or minus 10 ms) matters little (9 to 11 of 18 at each value).
+
+Reading:
+- A dart that tumbles at 14 to 30 rad/s arrives at an angle set by the phase of its fin-driven oscillation, so a stronger fin shifts that phase and the throw tuned to the nominal fin fails. Stick rate follows the fin coefficient, which is a guess (ADR-0005).
+- The search cannot trade spin away: below about 14 rad/s it loses accuracy and sticks less. A fast wrist cut the spin from 22 to 16 rad/s without raising sticks.
+- So the ceiling of about 55% is set by the stick model plus the aero guesses at least as much as by the throw. A human-thrown dart filmed in flight would pin the fin and damping numbers and show how a real dart settles; that needs no hardware beyond a dart and a phone camera.
+
+Not tried: a cradle pad grip (a model change to `GRIP_*` and the release dynamics), a spin-cancelling wrist trajectory beyond the linear sweep, and a looser stick criterion. Not conclusive: single seed, one budget; the 3 to 4 point differences between rows are noise.
+
+2.37 m and the move off 0.5 m stay blocked on real flight data or a different release mechanism.
+
 ## Decision (2026-11-07)
 
 - `twin.yaml` stays at the working setup: board 0.5 m, stock servos, `power` off. It is the only setup with a robust throw (sticks 100% across the aero guesses, base-throw map in `docs/baselines/basemap.json`).
