@@ -24,6 +24,10 @@ COINCIDENCES = {
     ("render.py", 480.0): "video frame height (the mast camera's own size comes from the twin)",
     ("render.py", 640.0): "video frame width",
     ("detect.py", 0.6): "lower bound of the accepted ellipse-axis range",
+    ("cli.py", 60.0): "search iteration count default",
+    ("ladder.py", 60.0): "search iteration count default",
+    ("cli.py", 1.4): "a rung of the distance ladder, m, not the mount height",
+    ("ladder.py", 4.5): "lower edge of the human release-speed band, m/s, not a servo limit",
 }
 
 

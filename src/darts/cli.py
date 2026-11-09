@@ -178,6 +178,37 @@ def _sysid(args: argparse.Namespace) -> int:
     return 0
 
 
+def _ladder(args: argparse.Namespace) -> int:
+    if not assets_available():
+        print("SO-101 assets missing: run `make assets`", file=sys.stderr)
+        return 2
+    import dataclasses
+
+    from darts.ladder import farthest_robust, ladder, parse_power
+
+    twin = load_twin(args.twin)
+    twin = dataclasses.replace(twin, power=parse_power(args.power))
+    rows = ladder(
+        twin, args.distances, args.lean, args.workers, args.maxiter, args.popsize, args.seed
+    )
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "ladder.json").write_text(json.dumps(rows, indent=2))
+    print("dist  lean  sticks  miss   speed  angle  x     spin  arrival  outside bands")
+    for r in rows:
+        left = (
+            f"{r['distance_m']:.2f}  {r['lean_m']:.1f}  {r['stick_rate']:6.0%}  {r['miss_m']:.2f}"
+        )
+        mid = (
+            f"{r['release_speed_m_s']:5.2f}  {r['release_angle_deg']:4.0f}   {r['release_x_m']:.2f}"
+        )
+        right = f"{r['release_spin_rad_s']:4.0f}  {r['arrival_deg']:5.0f}"
+        print(f"{left}  {mid}  {right}    {','.join(r['flags']) or '-'}")
+    best = farthest_robust(rows)
+    print(f"farthest robust distance: {best['distance_m'] if best else 'none'} m")
+    return 0
+
+
 def _visibility(args: argparse.Namespace) -> int:
     if not assets_available():
         print("SO-101 assets missing: run `make assets`", file=sys.stderr)
@@ -308,6 +339,18 @@ def main(argv: list[str] | None = None) -> int:
     ga.add_argument("--max-darts", type=int, help="render only the first N darts")
     ga.add_argument("--out", default="runs/game")
     ga.add_argument("--twin", default="twin.yaml")
+    la = sub.add_parser("ladder", help="robust throw search at a ladder of board distances")
+    la.add_argument("--distances", type=float, nargs="+", default=[0.5, 1.0, 1.4, 1.8, 2.1, 2.37])
+    la.add_argument("--lean", type=float, nargs="+", default=[0.4, 0.2], help="first at every rung")
+    la.add_argument(
+        "--power", default="9:33.5:0.38:0.38", help="AK60-6: N.m:rad/s:shoulder kg:elbow kg"
+    )
+    la.add_argument("--workers", type=int, default=6)
+    la.add_argument("--maxiter", type=int, default=60)
+    la.add_argument("--popsize", type=int, default=20)
+    la.add_argument("--seed", type=int, default=1)
+    la.add_argument("--out", default="runs/ladder")
+    la.add_argument("--twin", default="twin.yaml")
     si = sub.add_parser("sysid", help="fit servo gain, latency and jaw delay to arm logs, JSON out")
     si.add_argument("logs", nargs="+", help="JSON-lines logs written by `darts.arm.write_log`")
     si.add_argument("--twin", default="twin.yaml")
@@ -334,5 +377,6 @@ def main(argv: list[str] | None = None) -> int:
         "estimate": _estimate,
         "game": _game,
         "sysid": _sysid,
+        "ladder": _ladder,
         "replay": _replay,
     }[args.cmd](args)

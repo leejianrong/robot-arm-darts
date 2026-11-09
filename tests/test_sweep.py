@@ -71,6 +71,14 @@ def test_tail_first_fast_spinning_or_very_fast_releases_are_penalised():
     assert release_penalty(result(release_speed_m_s=9.4)) > 0.5
 
 
+def test_a_release_past_the_lean_is_penalised():
+    from darts.sweep import release_penalty
+
+    assert release_penalty(result(release_x_m=0.3)) == 0
+    assert release_penalty(result(release_x_m=0.6)) > 0.1
+    assert release_penalty(result(release_x_m=0.3), lean_m=0.2) > 0.05
+
+
 def test_the_wide_variant_set_covers_every_aero_corner_with_all_three_jitters():
     from darts.sweep import WIDE_VARIANTS
 

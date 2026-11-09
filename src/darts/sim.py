@@ -167,6 +167,7 @@ class ThrowResult:
     arrival_speed_m_s: float = 0.0  # speed along the board normal at contact or crossing
     stuck: bool = False  # the tip hit the board fast and square enough to stick
     score: int = 0  # points for a stuck dart
+    release_x_m: float = 0.0  # how far ahead of the base axis the dart left the jaws
 
     @property
     def miss_m(self) -> float:
@@ -356,7 +357,7 @@ class ThrowSim:
         m, d, tw = self.model, self.data, self.twin
         dt = m.opt.timestep
         board_x, zc = tw.board.distance_m, tw.board.centre_height_m
-        released, speed, angle, height = False, 0.0, 0.0, 0.0
+        released, speed, angle, height, release_x = False, 0.0, 0.0, 0.0, 0.0
         misalign, spin = 0.0, 0.0
         crossed, yz, hit, slipped, diverged = False, NO_POINT, False, False, False
         collided, stuck, score, arrival, arrival_v = False, False, 0, float(np.pi), 0.0
@@ -404,7 +405,7 @@ class ThrowSim:
                     slipped = t_off < p.t_release_s
                     speed = float(np.linalg.norm(v_off))
                     angle = float(np.arctan2(v_off[2], np.hypot(v_off[0], v_off[1])))
-                    height = float(p_off[2])
+                    height, release_x = float(p_off[2]), float(p_off[0])
             if released:
                 if (c := self._board_contact(pre_vel)) is not None:
                     stuck, y, zb = c
@@ -443,6 +444,7 @@ class ThrowSim:
             release_speed_m_s=speed,
             release_angle_rad=angle,
             release_height_m=height,
+            release_x_m=release_x,
             release_misalign_rad=misalign,
             release_spin_rad_s=spin,
             arrival_angle_rad=arrival,
