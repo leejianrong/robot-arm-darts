@@ -178,6 +178,29 @@ Tripling the variants in the cost did not help (57% and 56% before), and the AK6
 
 2.37 m stays a design target.
 
+## Distance ladder (DART-35, 2026-11-10)
+
+`darts ladder`: the robust search (`--robust`, 6 variants, 60 generations of 20, seed 1) with the AK60-6 power set (9 N.m, 33.5 rad/s, 0.38 kg on shoulder and elbow) at each board distance, then the 54-variant check on each result. The search caps release at a lean (0.4 m ahead of the base axis, 0.2 m as a sensitivity run at 2.37 m). Run on the laptop: 3 processes at low priority, about 4 hours. Bands flag a release outside the human numbers above.
+
+| Distance | Sticks in 54 | Miss | Release speed | Release angle | Release x | Spin | Arrival | Outside bands |
+|---|---|---|---|---|---|---|---|---|
+| 1.0 m | 0% | 19 cm | 2.96 m/s | 15 deg | -0.03 m | 4 rad/s | 61 deg | speed |
+| 1.4 m | 35% | 5 cm | 3.95 m/s | 52 deg | -0.23 m | 16 rad/s | 32 deg | speed, angle |
+| 1.8 m | 56% | 4 cm | 4.83 m/s | 24 deg | -0.10 m | 22 rad/s | 3 deg | none |
+| 2.1 m | 48% | 6 cm | 4.91 m/s | 27 deg | -0.11 m | 16 rad/s | 16 deg | angle |
+| 2.37 m | 48% | 7 cm | 5.41 m/s | 23 deg | -0.07 m | 32 rad/s | 29 deg | none |
+| 2.37 m, lean 0.2 | 48% | 7 cm | 5.40 m/s | 23 deg | -0.08 m | 32 rad/s | 28 deg | none |
+
+No rung reaches 80%, so there is no working distance to move to: the twin stays at 0.5 m.
+
+Reading:
+- **The result is not monotone in distance, so the search is the suspect, not the physics.** 1.0 m should be easier than 2.37 m and gets 0%: the search settled on a slow 3 m/s lob that arrives 61 degrees off the board normal. One seed, one budget. Treat the table as "this search at this budget found nothing above 56%", not as the reach limit.
+- **The lean cap never bound.** Every best throw releases behind the base axis (x from -0.03 to -0.23 m), not ahead of it; the 0.2 m run gave the same throw as 0.4 m. Humans release about 0.7 m in front of the line (derived above). The search's arm swing releases the dart near or behind the shoulder, which is the opposite of a human's reach forward. That looks like the next thing to look at: the start and end poses the search can reach, and the 0.45 s grip window, may keep the release back near the body.
+- **Where the releases are human-like.** At 1.8 m and 2.37 m the speed (4.8 to 5.4 m/s) and angle (23 to 24 degrees) fall inside the bands, though the angle is steeper than a human's 16 degrees and the spin is 22 to 32 rad/s.
+- **Stick rate is stuck at 35 to 56%, as in DART-34.** More distance did not make it worse, which fits "the knife-edge is structural" more than "2.37 m is out of reach".
+
+Next steps this points to (not done): a longer or wider search at 1.0 m to see whether 0% is a search failure; allow the search to release further forward; the wrist_flex power variant and a spin-cancelling wrist (DART-37).
+
 ## Decision (2026-11-07)
 
 - `twin.yaml` stays at the working setup: board 0.5 m, stock servos, `power` off. It is the only setup with a robust throw (sticks 100% across the aero guesses, base-throw map in `docs/baselines/basemap.json`).
