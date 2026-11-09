@@ -35,6 +35,8 @@ MAX_RELEASE_SPEED_M_S = 6.0
 MISALIGN_PENALTY_M = 0.3
 SPIN_PENALTY_M_PER_RAD_S = 0.01
 RELEASE_SPEED_PENALTY_M_PER_M_S = 0.2
+LEAN_M = 0.4  # the hand may be this far ahead of the base axis at release (ADR-0009)
+LEAN_PENALTY_M_PER_M = 1.0
 VARIANT_COST_CAP = 13.0  # above 10 + any shortfall, so falling short keeps its gradient; only a
 # crashed throw (100) is capped, so one bad variant cannot drown the average
 # (fin, damping, drag multipliers, release-time jitter s): the nominal throw, early and late
@@ -56,10 +58,12 @@ WIDE_VARIANTS = tuple(
 ROBUST_VARIANTS = {"basic": BASIC_VARIANTS, "wide": WIDE_VARIANTS}
 
 
-def release_penalty(r: ThrowResult) -> float:
-    """Metres of penalty for releases that the 54-variant check later shows to be knife-edge."""
+def release_penalty(r: ThrowResult, lean_m: float = LEAN_M) -> float:
+    """Metres of penalty for releases that the 54-variant check later shows to be knife-edge, or
+    that reach further past the base than a thrower may lean."""
     return (
-        MISALIGN_PENALTY_M * (r.release_misalign_rad > MAX_MISALIGN_RAD)
+        LEAN_PENALTY_M_PER_M * max(0.0, r.release_x_m - lean_m)
+        + MISALIGN_PENALTY_M * (r.release_misalign_rad > MAX_MISALIGN_RAD)
         + SPIN_PENALTY_M_PER_RAD_S * max(0.0, r.release_spin_rad_s - MAX_SPIN_RAD_S)
         + RELEASE_SPEED_PENALTY_M_PER_M_S * max(0.0, r.release_speed_m_s - MAX_RELEASE_SPEED_M_S)
     )
@@ -104,6 +108,7 @@ class Report:
     best_release_speed_m_s: float
     best_release_angle_deg: float
     best_release_height_m: float
+    best_release_x_m: float
     best_release_misalign_deg: float
     best_release_spin_rad_s: float
     best_arrival_deg: float
@@ -115,7 +120,12 @@ class Report:
 
 
 def sweep(
-    twin: Twin, seed: int = 0, maxiter: int = 60, popsize: int = 15, robust: str | None = None
+    twin: Twin,
+    seed: int = 0,
+    maxiter: int = 60,
+    popsize: int = 15,
+    robust: str | None = None,
+    lean_m: float = LEAN_M,
 ) -> tuple[Report, ThrowParams]:
     """Search for a throw. With `robust` ("basic" or "wide"), the cost averages over that set of
     ROBUST_VARIANTS and adds `release_penalty`, so the answer survives aero guesses and jitter."""
@@ -138,7 +148,10 @@ def sweep(
         for vsim, jit in variants:
             v = vsim.throw(replace(decode(x), t_release_s=float(x[6]) + jit))
             costs.append(
-                min(cost(v, twin.board.stick_min_speed_m_s) + release_penalty(v), VARIANT_COST_CAP)
+                min(
+                    cost(v, twin.board.stick_min_speed_m_s) + release_penalty(v, lean_m),
+                    VARIANT_COST_CAP,
+                )
             )
         return float(np.mean(costs))
 
@@ -158,6 +171,7 @@ def sweep(
         best_release_speed_m_s=r.release_speed_m_s,
         best_release_angle_deg=float(np.degrees(r.release_angle_rad)),
         best_release_height_m=r.release_height_m,
+        best_release_x_m=r.release_x_m,
         best_release_misalign_deg=float(np.degrees(r.release_misalign_rad)),
         best_release_spin_rad_s=r.release_spin_rad_s,
         best_arrival_deg=float(np.degrees(r.arrival_angle_rad)),
