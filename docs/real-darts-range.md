@@ -180,7 +180,7 @@ Tripling the variants in the cost did not help (57% and 56% before), and the AK6
 
 ## Distance ladder (DART-35, 2026-11-10)
 
-`darts ladder`: the robust search (`--robust`, 6 variants, 60 generations of 20, seed 1) with the AK60-6 power set (9 N.m, 33.5 rad/s, 0.38 kg on shoulder and elbow) at each board distance, then the 54-variant check on each result. The search caps release at a lean (0.4 m ahead of the base axis, 0.2 m as a sensitivity run at 2.37 m). Run on the laptop: 3 processes at low priority, about 4 hours. Bands flag a release outside the human numbers above.
+`darts ladder`: the robust search (`--robust`, 6 variants, 60 generations of 20, seed 1) with the AK60-6 power set (9 N.m, 33.5 rad/s, 0.38 kg on shoulder and elbow) at each board distance, then the 54-variant check on each result. The search caps release at a lean (0.4 m ahead of the base axis, 0.2 m as a sensitivity run at 2.37 m). Run on the laptop: 3 processes at low priority, about 2 hours. Bands flag a release outside the human numbers above.
 
 | Distance | Sticks in 54 | Miss | Release speed | Release angle | Release x | Spin | Arrival | Outside bands |
 |---|---|---|---|---|---|---|---|---|
